@@ -32,7 +32,7 @@ START:
 *        MOVE.B  #4, D0          *
 *        TRAP    #15
 *        
-        MOVE.B  D1, ENDPT         *ending memory location stored
+*        MOVE.B  D1, ENDPT         *ending memory location stored
 
         LEA     stack,SP        *Load the SP
 
@@ -141,19 +141,61 @@ MoveByte LEA MOVEByteDis, A1
         MOVEM.W D0, -(SP)     *save word in stack pointer to be reused
         JSR Src
         JSR Des
-        BRA ModeDecode
-        BRA XnDecode
-        BRA MoveDesModeDecode
-        BRA MoveDesXnDecode
         
+
+
+*----------------------------------------------------------------
+*                         Decode Methods                        |
+*----------------------------------------------------------------
+
+Src             BRA ModeDecode
+Des             BRA DesModeDecode
+
+
+
+
+
+
+
+DesModeDecode   MOVEM.W (SP)+, D0
+                MOVEM.W D0, -(SP)
+                ROR.W #12, D0
+                MOVE.B #shift10, D1
+                
+                LSR.W D1, D0
+                
+                
+                JSR ModeCompare 
+                RTS
+
         
-ModeDecode      ROR.W #6, D0
+ModeDecode      MOVEM.W (SP)+, D0
+                MOVEM.W D0, -(SP)
+                ROR.W #6, D0
                 MOVE.B  #shift10,D1       *Shift 10 bits to the right  
 
                 LSR.W   D1,D0           *Move the bits
                 
                 LSR.W #3, D0   *D2 now has the mode
                 Bra ModeCompare    
+
+XnDecode        MOVEM.W (SP)+, D0 *reload starting word from memory
+                MOVEM.W D0, -(SP) * save again
+                ROR.W #3, D0       * last three bits to isolate Xn
+                
+                MOVE.B #shift13, D1
+                LSR.W D1,D0        *format is good last three bits in least signifant location
+                Bra XnCompare
+
+
+
+
+*----------------------------------------------------------------
+*                         Comparisons                           |
+*----------------------------------------------------------------
+
+
+*------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     CMPI.B #%000, D0 * last three are zeroes
                 BEQ   disDnRegSrcMode             *jump to subroutine for Data register Source
@@ -178,36 +220,9 @@ ModeCompare4    CMPI.B  #%100, D0
 ModeCompare5    CMPI.B  #%111, D0
                 BEQ disEAmode
                 
-               
+              
 
-*check mode of source        
-disDnRegSrcMode LEA DnReg, A1
-                MOVE.B #14, D0
-                TRAP #15
-                    
-disAnRegSrcMode
-
-disAnIndMode    LEA LeftParen, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                LEA AnReg,      A1
-                MOVE.B  #14,     D0
-                TRAP    #15
-                JSR     XnDecode
-                LEA     RightParen, A1
-                MOVE.B  #14,    D0
-                TRAP    #15
-                RTS
-                
-                
-XnDecode        MOVEM.W (SP)+, D0 *reload starting word from memory
-                MOVEM.W D0, -(SP) * save again
-                ROR.W #3, D0       * last three bits to isolate Xn
-                
-                MOVE.B #shift13, D1
-                LSR.W D1,D0        *format is good last three bits in least signifant location
-                Bra XnCompare
-                
+*---------------------Register Compare---------------------                
 XnCompare       CMPI.b #%000, D0
                 BEQ XnIs0
                 BNE XnCompare1
@@ -238,10 +253,38 @@ XnCompare6      CMPI.b #%110, D0
 
 XnCompare7      CMPI.b #%111, D0
                 BEQ XnIs7
+                BNE disError
                 * FIXME we may need to use this for a bad command BNE XnCompare1
 
+
+*----------------------------------------------------------------
+*                          DISPLAYS                             |
+*----------------------------------------------------------------
+
+
+
+
+*---------------------MODE Displays----------------------
+disDnRegSrcMode LEA DnReg, A1
+                MOVE.B #14, D0
+                TRAP #15
+                RTS
+                    
+disAnRegSrcMode
+
+disAnIndMode    LEA LeftParen, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                LEA AnReg,      A1
+                MOVE.B  #14,     D0
+                TRAP    #15
+                JSR     XnDecode
+                LEA     RightParen, A1
+                MOVE.B  #14,    D0
+                TRAP    #15
+                RTS
                 
-                
+*----------------------Register Displays----------------------                
 XnIs0           LEA disZero, A1
                 MOVE.B #14, D0
                 TRAP #15
@@ -284,16 +327,21 @@ XnIs7           LEA disSeven, A1
 
 
                 
-                
+disError        LEA Error, A1
+                Move.B #14, D0
+                Trap #15
+                RTS               
                 
                 
          
          
          
-
+*----------------------------------------------------------------
+*                         String constants                      |
+*----------------------------------------------------------------
 
 * Put variables and constants here
-
+Error DC.B  'error', 0
 
 MOVEByteDis    DC.B   'MOVE.B ', 0
 MOVEWordDis    DC.B   'MOVE.W ', 0   
@@ -318,6 +366,7 @@ disSeven    DC.B    '7', 0
 
 
     END    START        ; last line of source
+
 
 
 *~Font name~Courier New~
