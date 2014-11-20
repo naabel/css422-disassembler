@@ -1,0 +1,257 @@
+00001000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.15.02
+Created On: 11/19/2014 6:48:30 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :CSS422 Project
+00000000                             3  * Written by :Nicholas Abel and Julio Perez
+00000000                             4  * Date       :November 7, 2014
+00000000                             5  * Description:Disassembler
+00000000                             6  *-----------------------------------------------------------
+00000000  =000000AA                  7  STARTPT   EQU $AA     *starting point
+00000000  =00000055                  8  ENDPT     EQU $55     *ending point
+00000000  =00000400                  9  temp      EQU $400    *location to work at
+00000000  =0000A000                 10  stack     EQU $A000
+00000000  =00001081                 11  example   EQU %0001000010000001    * I made up bits 0 to 11      
+00000000  =0000000C                 12  shift12   EQU 12                   * Shift 12 bits 
+00000000  =0000000A                 13  shift10   EQU 10                   * Shift 10 bits
+00000000  =0000000D                 14  shift13   EQU 13 
+00000000                            15  
+00000000                            16  
+00001000                            17          ORG    $1000
+00001000                            18  START:                          
+00001000                            19  *        LEA     ASKSTART, A1    *message to ask user for input
+00001000                            20  *        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
+00001000                            21  *        TRAP    #15             *Display A1 message
+00001000                            22  *        
+00001000                            23  *        MOVE.B  #4, D0          *input rule saves to D1
+00001000                            24  *        TRAP    #15             *initiate read from keyboard
+00001000                            25  *        
+00001000                            26  *        MOVE.B  D1, STARTPT        *save number to NUM1
+00001000                            27  *        
+00001000                            28  *        LEA     ASKEND, A1      *ask about ending memory location
+00001000                            29  *        MOVE.B  #13, D0         
+00001000                            30  *        TRAP    #15             *display A1
+00001000                            31  *        
+00001000                            32  *        MOVE.B  #4, D0          *
+00001000                            33  *        TRAP    #15
+00001000                            34  *        
+00001000  11C1 0055                 35          MOVE.B  D1, ENDPT         *ending memory location stored
+00001004                            36  
+00001004  4FF9 0000A000             37          LEA     stack,SP        *Load the SP
+0000100A                            38  
+0000100A  41F9 00001026             39          LEA     jmp_table,A0    *Index into the table
+00001010                            40  
+00001010  4280                      41          CLR.L   D0              *Zero it
+00001012  4281                      42          CLR.L   D1
+00001014                            43   
+00001014                            44  *Get word size element
+00001014                            45  
+00001014  303C 1081                 46          MOVE.W  #example,D0     *variable put in place
+00001018                            47  
+00001018  123C 000C                 48          MOVE.B  #shift12,D1       *Shift 12 bits to the right  
+0000101C                            49  
+0000101C  E268                      50          LSR.W   D1,D0           *Move the bits
+0000101E                            51  
+0000101E  C0FC 0006                 52          MULU    #6,D0       *Form offset     
+00001022                            53  
+00001022  4EB0 0000                 54          JSR     0(A0,D0)    *Jump indirect with index
+00001026                            55  * check read pointer location against EnDPt if end done
+00001026                            56  * otherwise move back into read sub routine
+00001026                            57                      
+00001026                            58  
+00001026                            59  jmp_table  
+00001026                            60  
+00001026  4EF9 00001086             61                 JMP         code0000
+0000102C                            62  
+0000102C  4EF9 0000108A             63                 JMP         code0001
+00001032                            64  
+00001032  4EF9 0000108E             65                 JMP         code0010
+00001038                            66  
+00001038  4EF9 00001092             67                 JMP         code0011
+0000103E                            68  
+0000103E  4EF9 00001096             69                 JMP         code0100
+00001044                            70  
+00001044  4EF9 0000109A             71                 JMP         code0101
+0000104A                            72  
+0000104A  4EF9 0000109E             73                 JMP         code0110
+00001050                            74  
+00001050  4EF9 000010A2             75                 JMP         code0111
+00001056                            76  
+00001056  4EF9 000010A6             77                 JMP         code1000
+0000105C                            78  
+0000105C  4EF9 000010AA             79                 JMP         code1001
+00001062                            80  
+00001062  4EF9 000010AE             81                 JMP         code1010
+00001068                            82  
+00001068  4EF9 000010B2             83                 JMP         code1011
+0000106E                            84  
+0000106E  4EF9 000010B4             85                 JMP         code1100
+00001074                            86  
+00001074  4EF9 000010B8             87                 JMP         code1101
+0000107A                            88  
+0000107A  4EF9 000010BC             89                 JMP         code1110
+00001080                            90  
+00001080  4EF9 000010C0             91                 JMP         code1111
+00001086                            92  
+00001086                            93  *subroutines from jump table
+00001086                            94  
+00001086                            95  
+00001086  4E72 2700                 96  code0000       STOP        #$2700
+0000108A                            97  
+0000108A  6000 0038                 98  code0001       BRA         MoveByte
+0000108E                            99  
+0000108E  4E72 2700                100  code0010       STOP        #$2700
+00001092                           101  
+00001092  4E72 2700                102  code0011       STOP        #$2700
+00001096                           103  
+00001096  4E72 2700                104  code0100       STOP        #$2700
+0000109A                           105  
+0000109A  4E72 2700                106  code0101       STOP        #$2700
+0000109E                           107  
+0000109E  4E72 2700                108  code0110       STOP        #$2700
+000010A2                           109  
+000010A2  4E72 2700                110  code0111       STOP        #$2700
+000010A6                           111  
+000010A6  4E72 2700                112  code1000       STOP        #$2700
+000010AA                           113  
+000010AA  4E72 2700                114  code1001       STOP        #$2700
+000010AE                           115  
+000010AE  4E72 2700                116  code1010       STOP        #$2700
+000010B2                           117   
+000010B2  60FE                     118  code1011       BRA        code1011
+000010B4                           119  
+000010B4  4E72 2700                120  code1100       STOP        #$2700
+000010B8                           121  
+000010B8  4E72 2700                122  code1101       STOP        #$2700
+000010BC                           123  
+000010BC  4E72 2700                124  code1110       STOP        #$2700
+000010C0                           125  
+000010C0  4E72 2700                126  code1111       STOP        #$2700
+000010C4                           127  
+000010C4                           128   
+000010C4                           129  
+000010C4                           130  
+000010C4                           131  
+000010C4  43F9 00001120            132  MoveByte LEA MOVEByteDis, A1
+000010CA  103C 000E                133           MOVE.B #14, D0
+000010CE  4E4F                     134           TRAP #15
+000010D0                           135  
+000010D0                           136  *continue searching through the machine code for source then destination
+000010D0                           137  *because of writing format
+000010D0  4280                     138          CLR.L D0
+000010D2  4281                     139          CLR.L D1
+000010D4  303C 1081                140          MOVE.W #example, D0  *reallocate example to reconfigure for next step
+000010D8  48A7 8000                141          MOVEM.W D0, -(SP)     *save word in stack pointer to be reused
+000010DC  EC58                     142          ROR.W #6, D0
+000010DE  123C 000A                143          MOVE.B  #shift10,D1       *Shift 10 bits to the right  
+000010E2                           144  
+000010E2  E268                     145          LSR.W   D1,D0           *Move the bits
+000010E4                           146          
+000010E4  3400                     147          MOVE.W D0, D2 *move to new location to strip
+000010E6  E64A                     148          LSR.W #3, D2   *D2 now has the mode
+000010E8  0C02 0000                149          CMPI.B #%000, D2 * last three are zeroes
+000010EC  6700 0002                150          BEQ   DRegSrcMode             *jump to subroutine for Data register Source
+000010F0                           151          *FIXME: needs to have not equal Branch here
+000010F0                           152  
+000010F0                           153  *check mode of source        
+000010F0  43F9 00001138            154  DRegSrcMode     LEA DnReg, A1
+000010F6  103C 000E                155                  MOVE.B #14, D0
+000010FA  4E4F                     156                  TRAP #15
+000010FC                           157                  
+000010FC  4C9F 0001                158  XnDecode        MOVEM.W (SP)+, D0 *reload starting word from memory
+00001100  48A7 8000                159                  MOVEM.W D0, -(SP) * save again
+00001104  E658                     160                  ROR.W #3, D0       * last three bits to isolate Xn
+00001106                           161                  
+00001106  123C 000D                162                  MOVE.B #shift13, D1
+0000110A  E268                     163                  LSR.W D1,D0        *format is good last three bits in least signifant location
+0000110C  0C00 0001                164                  CMPI.b #%001, D0
+00001110  6700 0002                165                  BEQ XnIs1
+00001114                           166                  
+00001114  43F9 00001188            167  XnIs1           LEA disOne, A1
+0000111A  103C 000E                168                  MOVE.B #14, D0
+0000111E  4E4F                     169                  TRAP #15
+00001120                           170                  
+00001120                           171                  
+00001120                           172                  
+00001120                           173                  
+00001120                           174                  
+00001120                           175           
+00001120                           176           
+00001120                           177           
+00001120                           178  
+00001120                           179  
+00001120                           180  * Put variables and constants here
+00001120                           181  
+00001120                           182  
+00001120= 4D 4F 56 45 2E 42 ...    183  MOVEByteDis    DC.B   'MOVE.B ', 0
+00001128= 4D 4F 56 45 2E 57 ...    184  MOVEWordDis    DC.B   'MOVE.W ', 0   
+00001130= 4D 4F 56 45 2E 4C ...    185  MOVELongDis    DC.B   'MOVE.L ', 0
+00001138= 44 00                    186  DnReg       DC.B   'D', 0
+0000113A= 49 64 65 6E 74 69 ...    187  ASKSTART    DC.B   'Identify the starting memory location: ', 0
+00001162= 49 64 65 6E 74 69 ...    188  ASKEND      DC.B   'Identify the ending memory location: ', 0
+00001188                           189  
+00001188                           190  *numbers
+00001188= 31 00                    191  disOne      DC.B    '1', 0
+0000118A= 32 00                    192  disTwo      DC.B    '2', 0
+0000118C= 33 00                    193  disThree    DC.B    '3', 0
+0000118E= 34 00                    194  disFour     DC.B    '4', 0
+00001190= 35 00                    195  disFive     DC.B    '5', 0
+00001192= 36 00                    196  disSix      DC.B    '6', 0
+00001194= 37 00                    197  disSeven    DC.B    '7', 0
+00001196= 38 00                    198  disEight    DC.B    '8', 0
+00001198                           199  
+00001198                           200  
+00001198                           201      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+ASKEND              1162
+ASKSTART            113A
+CODE0000            1086
+CODE0001            108A
+CODE0010            108E
+CODE0011            1092
+CODE0100            1096
+CODE0101            109A
+CODE0110            109E
+CODE0111            10A2
+CODE1000            10A6
+CODE1001            10AA
+CODE1010            10AE
+CODE1011            10B2
+CODE1100            10B4
+CODE1101            10B8
+CODE1110            10BC
+CODE1111            10C0
+DISEIGHT            1196
+DISFIVE             1190
+DISFOUR             118E
+DISONE              1188
+DISSEVEN            1194
+DISSIX              1192
+DISTHREE            118C
+DISTWO              118A
+DNREG               1138
+DREGSRCMODE         10F0
+ENDPT               55
+EXAMPLE             1081
+JMP_TABLE           1026
+MOVEBYTE            10C4
+MOVEBYTEDIS         1120
+MOVELONGDIS         1130
+MOVEWORDDIS         1128
+SHIFT10             A
+SHIFT12             C
+SHIFT13             D
+STACK               A000
+START               1000
+STARTPT             AA
+TEMP                400
+XNDECODE            10FC
+XNIS1               1114
