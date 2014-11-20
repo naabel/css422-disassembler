@@ -43,7 +43,9 @@ START:
  
 *Get word size element
 
-        MOVE.W  #example,D0     *variable put in place
+        MOVE.W  #example,D6     *variable put in place
+        
+        MOVE.W D6, D0
 
         MOVE.B  #shift12,D1       *Shift 12 bits to the right  
 
@@ -136,58 +138,66 @@ code1111       STOP        #$2700
 *                OpCode Breakdown Methods                       |
 *----------------------------------------------------------------
 
-MoveByte LEA MOVEByteDis, A1
-         MOVE.B #14, D0
-         TRAP #15
+*--------------MOVE.B Decode-----------------------------
+
+MoveByte JSR disMoveByte
 
 *continue searching through the machine code for source then destination
 *because of writing format
         CLR.L D0
         CLR.L D1
-        MOVE.W #example, D0  *reallocate example to reconfigure for next step
-        MOVEM.W D0, -(SP)     *save word in stack pointer to be reused
-        JSR Src
-        JSR Des
+        MOVE.W D6, D0     *reallocate example to reconfigure for next step
+        JSR RegModeXnDecode * src decode
+        JSR DesMoveDecode   *destination decode 
         
+        
+DesMoveDecode   BRA DesModeDecode        
+        
+DesModeDecode   MOVE.W  D6, D0
+                MOVE.B #shift12, D1
+                ROR.W D1, D0
+                MOVE.B #shift10, D1
+                
+                LSR.W D1, D0
+                *must isolate the mode
+                ROR.W #3, D0
+                MOVE.B #shift13, D1
+                LSR.W  D1, D0       *mode isolated
+                
+                JSR ModeCompare
+                JSR DesXnDecode 
+                RTS
 
+
+DesXnDecode     MOVE.W D6,D0
+                MOVE.B #shift12, D1
+                ROR.W D1, D0
+                MOVE.B #shift13, D1
+                
+                LSR.W D1, D0    *isolates Xn
+                
+                JSR XnCompare
+                RTS
 
 *----------------------------------------------------------------
 *                         Decode Methods                        |
 *----------------------------------------------------------------
 
-Src             BRA ModeDecode
-Des             BRA DesModeDecode
-
-
-
-
-
-
-
-DesModeDecode   MOVEM.W (SP)+, D0
-                MOVEM.W D0, -(SP)
-                ROR.W #12, D0
-                MOVE.B #shift10, D1
-                
-                LSR.W D1, D0
-                
-                
-                JSR ModeCompare 
-                RTS
+RegModeXnDecode      BRA ModeDecode
 
         
-ModeDecode      MOVEM.W (SP)+, D0
-                MOVEM.W D0, -(SP)
+ModeDecode      MOVE.W D6, D0
                 ROR.W #6, D0
                 MOVE.B  #shift10,D1       *Shift 10 bits to the right  
 
                 LSR.W   D1,D0           *Move the bits
                 
                 LSR.W #3, D0   *D2 now has the mode
-                Bra ModeCompare    
+                JSR ModeCompare
+                JSR XnDecode
+                RTS    
 
-XnDecode        MOVEM.W (SP)+, D0 *reload starting word from memory
-                MOVEM.W D0, -(SP) * save again
+XnDecode        MOVE.W D6, D0
                 ROR.W #3, D0       * last three bits to isolate Xn
                 
                 MOVE.B #shift13, D1
@@ -217,16 +227,16 @@ ModeCompare2    CMPI.B  #%010, D0
                 BNE ModeCompare3
                 
 ModeCompare3    CMPI.B  #%011, D0
-                BEQ disAnIndPostMode
+                *BEQ disAnIndPostMode
                 BNE ModeCompare4
 
 ModeCompare4    CMPI.B  #%100, D0
-                BEQ disAnIndPreMode
+                *BEQ disAnIndPreMode
                 BNE ModeCompare5
                 
 ModeCompare5    CMPI.B  #%111, D0
-                BEQ disEAmode
-                
+                *BEQ disEAmode
+                BNE disError
               
 
 *---------------------Register Compare---------------------                
@@ -291,6 +301,7 @@ disAnIndMode    LEA LeftParen, A1
                 TRAP    #15
                 RTS
                 
+                      
 *----------------------Register Displays----------------------                
 XnIs0           LEA disZero, A1
                 MOVE.B #14, D0
@@ -339,7 +350,10 @@ disError        LEA Error, A1
                 Trap #15
                 RTS               
                 
-                
+disMoveByte     LEA MOVEByteDis, A1
+                MOVE.B #14, D0
+                TRAP #15
+                RTS                
          
          
          
@@ -355,7 +369,7 @@ MOVEWordDis    DC.B   'MOVE.W ', 0
 MOVELongDis    DC.B   'MOVE.L ', 0
 DnReg       DC.B   'D', 0
 AnReg       DC.B   'A', 0
-LeftParen   DC.B    '('
+LeftParen   DC.B    '(', 0
 RightParen  DC.B    ')', 0
 ASKSTART    DC.B   'Identify the starting memory location: ', 0
 ASKEND      DC.B   'Identify the ending memory location: ', 0
