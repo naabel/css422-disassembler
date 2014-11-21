@@ -8,7 +8,7 @@ STARTPT   EQU $AA     *starting point
 ENDPT     EQU $55     *ending point
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %0001000010000001    * I made up bits 0 to 11      
+example   EQU %0001001000010111    * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -149,11 +149,13 @@ MoveByte JSR disMoveByte
         MOVE.W D6, D0     *reallocate example to reconfigure for next step
         JSR RegModeXnDecode * src decode
         JSR DesMoveDecode   *destination decode 
-        
+        NOP
+        RTS
         
 DesMoveDecode   BRA DesModeDecode        
         
-DesModeDecode   MOVE.W  D6, D0
+DesModeDecode   MOVE.B #%1, D7  *set flag for destination    
+                MOVE.W  D6, D0
                 MOVE.B #shift12, D1
                 ROR.W D1, D0
                 MOVE.B #shift10, D1
@@ -165,8 +167,9 @@ DesModeDecode   MOVE.W  D6, D0
                 LSR.W  D1, D0       *mode isolated
                 
                 JSR ModeCompare
-                JSR DesXnDecode 
-                RTS
+                *JSR DesXnDecode
+                NOP
+                RTS *done here
 
 
 DesXnDecode     MOVE.W D6,D0
@@ -194,7 +197,6 @@ ModeDecode      MOVE.W D6, D0
                 
                 LSR.W #3, D0   *D2 now has the mode
                 JSR ModeCompare
-                JSR XnDecode
                 RTS    
 
 XnDecode        MOVE.W D6, D0
@@ -215,7 +217,7 @@ XnDecode        MOVE.W D6, D0
 *------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     CMPI.B #%000, D0 * last three are zeroes
-                BEQ   disDnRegSrcMode             *jump to subroutine for Data register Source
+                BEQ   disDnRegSrcMode       *jump to subroutine for Data register Source
                 BNE   ModeCompare1              *FIXME: needs to have not equal Branch here
                 
 ModeCompare1    CMPI.B  #%001, D0
@@ -237,7 +239,8 @@ ModeCompare4    CMPI.B  #%100, D0
 ModeCompare5    CMPI.B  #%111, D0
                 *BEQ disEAmode
                 BNE disError
-              
+
+             
 
 *---------------------Register Compare---------------------                
 XnCompare       CMPI.b #%000, D0
@@ -285,6 +288,10 @@ XnCompare7      CMPI.b #%111, D0
 disDnRegSrcMode LEA DnReg, A1
                 MOVE.B #14, D0
                 TRAP #15
+                CMPI.B #%1, D7
+                BEQ     DesDisXn
+                BNE     SrcDisXn
+                CLR.L D7
                 RTS
                     
 disAnRegSrcMode
@@ -295,10 +302,20 @@ disAnIndMode    LEA LeftParen, A1
                 LEA AnReg,      A1
                 MOVE.B  #14,     D0
                 TRAP    #15
-                JSR     XnDecode
+                CMPI.B #%1, D7
+                BEQ     DesDisXn
+                BNE     SrcDisXn
+                CLR.L D7
                 LEA     RightParen, A1
                 MOVE.B  #14,    D0
                 TRAP    #15
+                RTS
+
+
+SrcDisXn        JSR XnDecode
+                RTS
+        
+DesDisXn        JSR DesXnDecode
                 RTS
                 
                       
