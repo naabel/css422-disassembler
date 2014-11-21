@@ -217,11 +217,11 @@ XnDecode        MOVE.W D6, D0
 *------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     CMPI.B #%000, D0 * last three are zeroes
-                BEQ   disDnRegSrcMode       *jump to subroutine for Data register Source
+                BEQ   disDnRegMode       *jump to subroutine for Data register Source
                 BNE   ModeCompare1              *FIXME: needs to have not equal Branch here
                 
 ModeCompare1    CMPI.B  #%001, D0
-                BEQ disAnRegSrcMode
+                BEQ disAnRegMode
                 BNE ModeCompare2
                 
 ModeCompare2    CMPI.B  #%010, D0
@@ -285,7 +285,19 @@ XnCompare7      CMPI.b #%111, D0
 
 
 *---------------------MODE Displays----------------------
-disDnRegSrcMode LEA DnReg, A1
+
+SrcDisXn        JSR XnDecode
+                RTS
+        
+DesDisXn        JSR DesXnDecode
+                RTS
+
+*create seperate right paren loop
+
+
+
+
+disDnRegMode    LEA DnReg, A1
                 MOVE.B #14, D0
                 TRAP #15
                 CMPI.B #%1, D7
@@ -294,7 +306,10 @@ disDnRegSrcMode LEA DnReg, A1
                 CLR.L D7
                 RTS
                     
-disAnRegSrcMode
+disAnRegMode    LEA AnReg, A1
+                MOVE.B #14, D0
+                TRAP #15
+                RTS
 
 disAnIndMode    LEA LeftParen, A1
                 MOVE.B  #14, D0
@@ -312,14 +327,49 @@ disAnIndMode    LEA LeftParen, A1
                 RTS
 
 
-SrcDisXn        JSR XnDecode
+disAnPosMode    LEA LeftParen, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                LEA AnReg,      A1
+                MOVE.B  #14,     D0
+                TRAP    #15
+                CMPI.B #%1, D7
+                BEQ     DesDisXn
+                BNE     SrcDisXn
+                CLR.L D7
+                LEA     RightParen, A1
+                MOVE.B  #14,    D0
+                TRAP    #15
+                LEA disPlus, A1
+                MOVE.B  #14,    D0
+                TRAP    #15
                 RTS
-        
-DesDisXn        JSR DesXnDecode
+
+disAnPreMode    LEA disMinus, A1
+                MOVE.B  #14,    D0
+                TRAP    #15
+                LEA LeftParen, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                LEA AnReg,      A1
+                MOVE.B  #14,     D0
+                TRAP    #15
+                CMPI.B #%1, D7
+                BEQ     DesDisXn
+                BNE     SrcDisXn
+                CLR.L D7
+                LEA     RightParen, A1
+                MOVE.B  #14,    D0
+                TRAP    #15
                 RTS
-                
+
+
+
+      
                       
-*----------------------Register Displays----------------------                
+*----------------------Register Displays---------------------- 
+
+*-----------Numbers------------               
 XnIs0           LEA disZero, A1
                 MOVE.B #14, D0
                 TRAP #15
@@ -362,17 +412,23 @@ XnIs7           LEA disSeven, A1
 
 
                 
-disError        LEA Error, A1
-                Move.B #14, D0
-                Trap #15
-                RTS               
-                
+              
+*----------OpCode-----------------                
 disMoveByte     LEA MOVEByteDis, A1
                 MOVE.B #14, D0
                 TRAP #15
                 RTS                
-         
-         
+
+
+
+
+
+
+*-----------Error------------------         
+disError        LEA Error, A1
+                Move.B #14, D0
+                Trap #15
+                RTS          
          
 *----------------------------------------------------------------
 *                         String constants                      |
@@ -388,6 +444,8 @@ DnReg       DC.B   'D', 0
 AnReg       DC.B   'A', 0
 LeftParen   DC.B    '(', 0
 RightParen  DC.B    ')', 0
+disPlus     DC.B    '+', 0
+disMinus    DC.B    '-', 0
 ASKSTART    DC.B   'Identify the starting memory location: ', 0
 ASKEND      DC.B   'Identify the ending memory location: ', 0
 
