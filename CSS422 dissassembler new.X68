@@ -165,11 +165,11 @@ MoveSrcDecode   BRA MoveSrcModeDecode
 MoveSrcModeDecode
                 MOVE.W  D6, D0
                 ROR.W   #6, D0
-                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
+                MOVE.B  #shift10,D1     *Prepare D1 for shifting 10
 
-                LSR.W   D1,D0           *Move the bits
+                LSR.W   D1,D0           *Shift D0 #10 bits to the right
                 
-                LSR.W   #3, D0   *D2 now has the mode
+                LSR.W   #3, D0          *Shift #3 bits right, D2 now has the mode
                 JSR     ModeCompare
                 BRA     MoveSrcXnDecode    
 
@@ -250,35 +250,35 @@ ModeCompare5    CMPI.B  #%111, D0
 
 *---------------------Register Compare---------------------                
 XnCompare       CMPI.b  #%000, D0
-                BEQ     XnIs0
+                BEQ     Print0
                 BNE     XnCompare1
                 
 XnCompare1      CMPI.b  #%001, D0
-                BEQ     XnIs1
+                BEQ     Print1
                 BNE     XnCompare2
 
 XnCompare2      CMPI.b  #%010, D0
-                BEQ     XnIs2
+                BEQ     Print2
                 BNE     XnCompare3
 
 XnCompare3      CMPI.b  #%011, D0
-                BEQ     XnIs3
+                BEQ     Print3
                 BNE     XnCompare4
 
 XnCompare4      CMPI.b  #%100, D0
-                BEQ     XnIs4
+                BEQ     Print4
                 BNE     XnCompare5
 
 XnCompare5      CMPI.b  #%101, D0
-                BEQ     XnIs5
+                BEQ     Print5
                 BNE     XnCompare6
 
 XnCompare6      CMPI.b  #%110, D0
-                BEQ     XnIs6
+                BEQ     Print6
                 BNE     XnCompare7
 
 XnCompare7      CMPI.b  #%111, D0
-                BEQ     XnIs7
+                BEQ     Print7
                 BNE     disError
                 * FIXME we may need to use this for a bad command BNE XnCompare1
 
@@ -496,9 +496,18 @@ XnIs7           LEA     disSeven, A1
                 TRAP    #15
                 RTS
 
+XnIs7           LEA     disSeven, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
 
-                
-              
+XnIs7           LEA     disSeven, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+
+
 *----------OpCode-----------------                
 disMoveByte     LEA     MOVEByteDis, A1
                 MOVE.B  #14, D0
@@ -546,10 +555,20 @@ disFour         DC.B    '4', 0
 disFive         DC.B    '5', 0
 disSix          DC.B    '6', 0
 disSeven        DC.B    '7', 0
+disEight        DC.B    '8', 0
+disNine         DC.B    '9', 0
+
+disA            DC.B    'A', 0
+disB            DC.B    'B', 0
+disC            DC.B    'C', 0
+disD            DC.B    'D', 0
+disE            DC.B    'E', 0
+disF            DC.B    'F', 0
 
 disNewLine      DC.B    '', 0
  
     END    START        ; last line of source
+
 
 
 
