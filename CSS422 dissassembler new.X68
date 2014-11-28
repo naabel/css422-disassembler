@@ -141,17 +141,49 @@ MoveByte        JSR     disMoveByte
                 CLR.L   D0
                 CLR.L   D1
                 MOVE.W  D6, D0     *reallocate example to reconfigure for next step
-                JSR     RegModeXnDecode * src decode
+                JSR     MoveSrcDecode * src decode
                 JSR     displayComma
                 JSR     displaySpace
-                JSR     DesMoveDecode   *destination decode
+                JSR     MoveDesDecode   *destination decode
                 JSR     displayLine 
                 NOP
                 RTS
          
-DesMoveDecode   BRA     DesModeDecode        
+
+
+*----------------------------------------------------------------
+*                  MOVE   Decode Methods                        |
+*----------------------------------------------------------------
+
+MoveSrcDecode   BRA MoveSrcModeDecode
+
         
-DesModeDecode   MOVE.B  #%1, D7  *set flag for destination    
+MoveSrcModeDecode
+                MOVE.W  D6, D0
+                ROR.W   #6, D0
+                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
+
+                LSR.W   D1,D0           *Move the bits
+                
+                LSR.W   #3, D0   *D2 now has the mode
+                JSR     ModeCompare
+                BRA     MoveSrcXnDecode    
+
+MoveSrcXnDecode
+                MOVE.W  D6, D0
+                ROR.W   #3, D0       * last three bits to isolate Xn
+                
+                MOVE.B  #shift13, D1
+                LSR.W   D1,D0        *format is good last three bits in least signifant location
+                Bra     XnCompare
+                RTS
+
+
+*------------
+MoveDesDecode   BRA     MoveDesModeDecode        
+        
+MoveDesModeDecode
+                MOVE.B  #%1, D7  *set flag for destination    
                 MOVE.W  D6, D0
                 MOVE.B  #shift12, D1
                 ROR.W   D1, D0
@@ -165,10 +197,11 @@ DesModeDecode   MOVE.B  #%1, D7  *set flag for destination
                 
                 JSR     ModeCompare
                 NOP
-                RTS *done here
+                BRA     MoveDesXnDecode
 
 
-DesXnDecode     MOVE.W  D6,D0
+MoveDesXnDecode
+                MOVE.W  D6,D0
                 MOVE.B  #shift12, D1
                 ROR.W   D1, D0
                 MOVE.B  #shift13, D1
@@ -177,33 +210,6 @@ DesXnDecode     MOVE.W  D6,D0
                 
                 JSR      XnCompare
                 RTS
-
-*----------------------------------------------------------------
-*                         Decode Methods                        |
-*----------------------------------------------------------------
-
-RegModeXnDecode      BRA ModeDecode
-
-        
-ModeDecode      MOVE.W  D6, D0
-                ROR.W   #6, D0
-                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
-
-                LSR.W   D1,D0           *Move the bits
-                
-                LSR.W   #3, D0   *D2 now has the mode
-                JSR     ModeCompare
-                RTS    
-
-XnDecode        MOVE.W  D6, D0
-                ROR.W   #3, D0       * last three bits to isolate Xn
-                
-                MOVE.B  #shift13, D1
-                LSR.W   D1,D0        *format is good last three bits in least signifant location
-                Bra     XnCompare
-
-
-
 
 *----------------------------------------------------------------
 *                         Comparisons                           |
@@ -225,15 +231,15 @@ ModeCompare2    CMPI.B  #%010, D0
                 BNE     ModeCompare3
                 
 ModeCompare3    CMPI.B  #%011, D0
-                *BEQ    disAnIndPostMode
+                BEQ    disAnIndPostMode
                 BNE     ModeCompare4
 
 ModeCompare4    CMPI.B  #%100, D0
-                *BEQ    disAnIndPreMode
+                BEQ    disAnIndPreMode
                 BNE     ModeCompare5
                 
 ModeCompare5    CMPI.B  #%111, D0
-                *BEQ    disEAmode
+                BEQ    disEAmode
                 BNE     disError
 
              
@@ -280,7 +286,7 @@ XnCompare7      CMPI.b  #%111, D0
 
 
 
-*---------------------MODE ShortCuts----------------------
+**---------------------MODE ShortCuts----------------------
 
 DnSrcDisXn       JSR     XnDecode
                  Bra     disDnRegBack
@@ -540,6 +546,7 @@ disSeven        DC.B    '7', 0
 disNewLine      DC.B    '', 0
  
     END    START        ; last line of source
+
 
 
 
