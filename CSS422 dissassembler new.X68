@@ -3,6 +3,10 @@
 * Written by :Nicholas Abel and Julio Perez
 * Date       :November 7, 2014
 * Description:Disassembler
+*
+*Nomenclature:   | OpCode |     Part       | Job
+*                | OpCode | Part | SubPart | Job
+*
 *-----------------------------------------------------------
 STARTPT   EQU $AA     *starting point
 ENDPT     EQU $55     *ending point
@@ -540,6 +544,7 @@ disSeven        DC.B    '7', 0
 disNewLine      DC.B    '', 0
  
     END    START        ; last line of source
+
 
 
 
