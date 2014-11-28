@@ -138,9 +138,6 @@ MoveByte        JSR     disMoveByte
 
 *continue searching through the machine code for source then destination
 *because of writing format
-                CLR.L   D0
-                CLR.L   D1
-                MOVE.W  D6, D0     *reallocate example to reconfigure for next step
                 JSR     MoveSrcDecode * src decode
                 JSR     displayComma
                 JSR     displaySpace
@@ -155,19 +152,7 @@ MoveByte        JSR     disMoveByte
 *                  MOVE   Decode Methods                        |
 *----------------------------------------------------------------
 
-MoveSrcDecode   BRA MoveSrcModeDecode
-
-        
-MoveSrcModeDecode
-                MOVE.W  D6, D0
-                ROR.W   #6, D0
-                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
-
-                LSR.W   D1,D0           *Move the bits
-                
-                LSR.W   #3, D0   *D2 now has the mode
-                JSR     ModeCompare
-                BRA     MoveSrcXnDecode    
+MoveSrcDecode   BRA MoveSrcXnDecode
 
 MoveSrcXnDecode
                 MOVE.W  D6, D0
@@ -175,8 +160,24 @@ MoveSrcXnDecode
                 
                 MOVE.B  #shift13, D1
                 LSR.W   D1,D0        *format is good last three bits in least signifant location
-                Bra     XnCompare
-                RTS
+                MOVE.W  D0, D3
+                BRA     MoveSrcModeDecode
+      
+MoveSrcModeDecode
+                CLR     D0
+                CLR     D1
+                MOVE.W  D6, D0
+                ROR.W   #6, D0
+                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
+
+                LSR.W   D1,D0           *Move the bits
+                
+                LSR.W   #3, D0   *D2 now has the mode
+                MOVE.W  D0, D2
+                JSR     ModeCompare
+                RTS    
+
+
 
 
 *------------
@@ -218,27 +219,27 @@ MoveDesXnDecode
 
 *------------------Mode Comparisons -----------------------------------------
 
-ModeCompare     CMPI.B  #%000, D0 * last three are zeroes
+ModeCompare     CMPI.B  #%000, D2 * last three are zeroes
                 BEQ     disDnRegMode       *jump to subroutine for Data register Source
                 BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
                 
-ModeCompare1    CMPI.B  #%001, D0
+ModeCompare1    CMPI.B  #%001, D2
                 BEQ     disAnRegMode
                 BNE     ModeCompare2
                 
-ModeCompare2    CMPI.B  #%010, D0
+ModeCompare2    CMPI.B  #%010, D2
                 BEQ     disAnIndMode
                 BNE     ModeCompare3
                 
-ModeCompare3    CMPI.B  #%011, D0
+ModeCompare3    CMPI.B  #%011, D2
                 BEQ    disAnIndPostMode
                 BNE     ModeCompare4
 
-ModeCompare4    CMPI.B  #%100, D0
+ModeCompare4    CMPI.B  #%100, D2
                 BEQ    disAnIndPreMode
                 BNE     ModeCompare5
                 
-ModeCompare5    CMPI.B  #%111, D0
+ModeCompare5    CMPI.B  #%111, D2
                 BEQ    disEAmode
                 BNE     disError
 
@@ -284,40 +285,7 @@ XnCompare7      CMPI.b  #%111, D0
 *----------------------------------------------------------------
 
 
-
-
-**---------------------MODE ShortCuts----------------------
-
-DnSrcDisXn       JSR     XnDecode
-                 Bra     disDnRegBack
-        
-DnDesDisXn       JSR     DesXnDecode
-                 Bra     disDnRegBack
-                    
-AnSrcDisXn       JSR     XnDecode
-                 Bra     disAnRegBack
-        
-AnDesDisXn       JSR     DesXnDecode
-                 Bra     disAnRegBack
-
-AnIndSrcDisXn    JSR     XnDecode
-                 Bra     disAnIndBack
-        
-AnIndDesDisXn    JSR     DesXnDecode
-                 Bra     disAnIndBack
-
-AnPreSrcDisXn    JSR     XnDecode
-                 Bra     disAnPreBack
-        
-AnPreDesDisXn    JSR     DesXnDecode
-                 Bra     disAnPreBack
-
-
-AnPosSrcDisXn    JSR     XnDecode
-                 Bra     disAnPosBack
-        
-AnPosDesDisXn    JSR     DesXnDecode
-                 Bra     disAnPosBack                
+          
 
 
 *---------------------MODE Displays----------------------
@@ -327,9 +295,7 @@ AnPosDesDisXn    JSR     DesXnDecode
 
 disDnRegMode    JSR     disDnReg
 
-                CMPI.B  #%1, D7
-                BEQ     DnDesDisXn
-                BNE     DnSrcDisXn
+                JSR     XnCompare
                 
 disDnRegBack    CLR.L   D7
                 RTS
@@ -338,9 +304,7 @@ disDnRegBack    CLR.L   D7
                     
 disAnRegMode    JSR     disAnReg
 
-                CMPI.B  #%1, D7
-                BEQ     AnDesDisXn
-                BNE     AnSrcDisXn
+                JSR     XnCompare
                 
 disAnRegBack    CLR.L   D7
                 RTS
@@ -350,9 +314,7 @@ disAnRegBack    CLR.L   D7
 disAnIndMode    JSR     disLeftParen
                 JSR     disAnReg
                 
-                CMPI.B  #%1, D7
-                BEQ     AnIndDesDisXn
-                BNE     AnIndSrcDisXn
+                JSR     XnCompare
                 
 disAnIndBack    CLR.L   D7
                 
@@ -365,9 +327,7 @@ disAnIndBack    CLR.L   D7
 disAnPosMode    JSR     disLeftParen
                 JSR     disAnReg
                 
-                CMPI.B  #%1, D7
-                BEQ     AnPosDesDisXn
-                BNE     AnPosSrcDisXn
+                JSR     XnCompare
                 
 disAnPosBack    CLR.L   D7
                 
@@ -382,9 +342,7 @@ disAnPreMode    JSR     displayMinus
                 JSR     disLeftParen
                 JSR     disAnReg
                 
-                CMPI.B  #%1, D7
-                BEQ     AnPreDesDisXn
-                BNE     AnPreSrcDisXn
+                JSR     XnCompare
                 
 disAnPreBack    CLR.L   D7
                 
@@ -452,42 +410,42 @@ displayLine     LEA     disNewLine, A1
                 
                 
 *-----------Numbers------------               
-XnIs0           LEA     disZero, A1
+print0           LEA     disZero, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
                 
-XnIs1           LEA     disOne, A1
+print1           LEA     disOne, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs2           LEA     disTwo, A1
+print2           LEA     disTwo, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs3           LEA     disThree, A1
+print3           LEA     disThree, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs4           LEA     disFour, A1
+print4           LEA     disFour, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs5           LEA     disFive, A1
+print5           LEA     disFive, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs6           LEA     disSix, A1
+print6           LEA     disSix, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-XnIs7           LEA     disSeven, A1
+print7           LEA     disSeven, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
