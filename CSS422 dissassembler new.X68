@@ -299,27 +299,25 @@ LogShiftGroup
                 JSR         displayComma
                 JSR         displaySpace
 *               JSR         ShiftGrpDest
-                
-
-LogShiftRet            
-                
-
 
 AsyShiftGroup
-                JSR         disAsymmShift
-                
-                CMPI.B      #0, D4
-                BEQ         disRightDir
-                BNE         disLeftDir
-AsyShiftRet   
+                JSR         disAsymmShift    
+                JSR         printDirection
+                JSR         printSize
+                JSR         ShiftGrpCount
+                JSR         displayComma
+                JSR         displaySpace
+*               JSR         ShiftGrpDest
+
 
 RotShiftGroup
-                JSR         disRotateShift
-                
+                JSR         disRotateShift    
                 JSR         printDirection
-
-RotShiftRet
-
+                JSR         printSize
+                JSR         ShiftGrpCount
+                JSR         displayComma
+                JSR         displaySpace
+*               JSR         ShiftGrpDest
 
 
 ShiftGrpCount
@@ -329,7 +327,7 @@ ShiftGrpCount
 
 
 printImmData    
-                JSR         printHashTag
+                JSR         printHash
                 JSR         printShiftRegNumber
                 RTS
                                 
@@ -339,14 +337,12 @@ printRegister
                 RTS
                 
 printShiftRegNumber
-                JSR         disDnReg
-                
-                CMPI.B      #0, D1
-                BEQ         print8
                 MOVE.W      D6, D1
                 LSL.W       #4, D1
                 MOVE.B      #13, D2
-                LSR.W       D2, D1
+                LSR.W       D2, D1                
+                CMPI.B      #0, D1
+                BEQ         print8
                 MOVE.B      #3, D0
                 TRAP #15
                 
@@ -659,7 +655,7 @@ printF          LEA     disF, A1
                 TRAP    #15
                 RTS
 
-print#          LEA     hashTag,A1
+printHash       LEA     hashTag,A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
