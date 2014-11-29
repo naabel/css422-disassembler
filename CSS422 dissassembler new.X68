@@ -3,12 +3,16 @@
 * Written by :Nicholas Abel and Julio Perez
 * Date       :November 7, 2014
 * Description:Disassembler
+*
+*Nomenclature:   | OpCode |     Part       | Job
+*                | OpCode | Part | SubPart | Job
+*
 *-----------------------------------------------------------
 STARTPT   EQU $AA     *starting point
 ENDPT     EQU $55     *ending point
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %0001001000010111    * I made up bits 0 to 11      
+example   EQU %1110001000001111    * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -94,13 +98,13 @@ jmp_table
 *subroutines from jump table
 
 
-code0000       STOP        #$2700
+code0000       STOP        #2700
 
 code0001       BRA         MoveByte
 
-code0010       STOP        #$2700
+code0010       BRA         MoveLong
 
-code0011       STOP        #$2700
+code0011       BRA         MoveWord
 
 code0100       STOP        #$2700
 
@@ -116,13 +120,13 @@ code1001       STOP        #$2700
 
 code1010       STOP        #$2700
  
-code1011       BRA        code1011
+code1011       BRA         code1011
 
 code1100       STOP        #$2700
 
 code1101       STOP        #$2700
 
-code1110       STOP        #$2700
+code1110       BRA         BitShiftGroup
 
 code1111       STOP        #$2700
 
@@ -147,6 +151,30 @@ MoveByte        JSR     disMoveByte
                 RTS
          
 
+*--------------MOVE.W Decode-----------------------------
+
+MoveWord        JSR     disMoveWord
+
+                JSR     MoveSrcDecode * src decode
+                JSR     displayComma
+                JSR     displaySpace
+                JSR     MoveDesDecode   *destination decode
+                JSR     displayLine 
+                NOP
+                RTS
+                
+                
+*--------------MOVE.L Decode-----------------------------
+
+MoveLong        JSR     disMoveLong
+
+                JSR     MoveSrcDecode * src decode
+                JSR     displayComma
+                JSR     displaySpace
+                JSR     MoveDesDecode   *destination decode
+                JSR     displayLine 
+                NOP
+                RTS
 
 *----------------------------------------------------------------
 *                  MOVE   Decode Methods                        |
@@ -155,6 +183,8 @@ MoveByte        JSR     disMoveByte
 MoveSrcDecode   BRA MoveSrcXnDecode
 
 MoveSrcXnDecode
+                CLR     D0
+                CLR     D1
                 MOVE.W  D6, D0
                 ROR.W   #3, D0       * last three bits to isolate Xn
                 
@@ -168,9 +198,9 @@ MoveSrcModeDecode
                 CLR     D1
                 MOVE.W  D6, D0
                 ROR.W   #6, D0
-                MOVE.B  #shift10,D1       *Shift 10 bits to the right  
+                MOVE.B  #shift10,D1     *Prepare D1 for shifting 10
 
-                LSR.W   D1,D0           *Move the bits
+                LSR.W   D1,D0           *Shift D0 #10 bits to the right
                 
                 LSR.W   #3, D0   *D2 now has the mode
                 MOVE.W  D0, D2
@@ -181,10 +211,22 @@ MoveSrcModeDecode
 
 
 *------------
-MoveDesDecode   BRA     MoveDesModeDecode        
+MoveDesDecode   BRA     MoveDesXnDecode        
+
+
+
+MoveDesXnDecode
+                MOVE.W  D6,D0
+                MOVE.B  #shift12, D1
+                ROR.W   D1, D0
+                MOVE.B  #shift13, D1
+                
+                LSR.W   D1, D0    *isolates Xn
+                MOVE.W  D0, D3
+                
+                BRA     MoveDesModeDecode
         
-MoveDesModeDecode
-                MOVE.B  #%1, D7  *set flag for destination    
+MoveDesModeDecode  
                 MOVE.W  D6, D0
                 MOVE.B  #shift12, D1
                 ROR.W   D1, D0
@@ -195,22 +237,113 @@ MoveDesModeDecode
                 ROR.W   #3, D0
                 MOVE.B  #shift13, D1
                 LSR.W   D1, D0       *mode isolated
-                
+                MOVE.W  D0, D2
                 JSR     ModeCompare
-                NOP
-                BRA     MoveDesXnDecode
-
-
-MoveDesXnDecode
-                MOVE.W  D6,D0
-                MOVE.B  #shift12, D1
-                ROR.W   D1, D0
-                MOVE.B  #shift13, D1
-                
-                LSR.W   D1, D0    *isolates Xn
-                
-                JSR      XnCompare
                 RTS
+
+
+
+
+
+
+*--------------BitShiftingGroup Decode-----------------------------
+
+bitShiftGroup            BRA bitShiftType
+
+bitShiftType
+                CLR         D0
+                CLR         D1
+                CLR         D2  *    
+                CLR         D3  *
+                CLR         D4  *will store direction of opcode
+                CLR         D5  *size
+                CLR         D7  *i/r
+                
+*------------       store direction bit               
+                MOVE.W      D6, D4
+                LSL.W       #7, D4
+                MOVE.B      #15, D1
+                LSR.W       D1, D4
+*-------------      store size bits
+                MOVE.B      D6, D5
+                LSR.B       #6, D5
+*-------------
+                MOVE.W      D6, D0             
+                LSR.W       #3, D0
+                MOVE.W      #14,D1
+                LSL.W       D1, D0
+                LSR.W       D1, D0
+                BRA         BitShiftTypeCompare
+
+                               
+BitShiftTypeCompare
+                CMPI.B      #%01, D0
+                BEQ         LogShiftGroup
+                CMPI.B      #%00, D0
+                BEQ         AsyShiftGroup
+                CMPI.B      #%11, D0
+                BEQ         RotShiftGroup
+                
+
+LogShiftGroup
+                JSR         disLogicShift    
+                JSR         printDirection
+                JSR         printSize
+                JSR         ShiftGrpCount
+                JSR         ShiftGrpDest
+                
+
+LogShiftRet            
+                
+
+
+AsyShiftGroup
+                JSR         disAsymmShift
+                
+                CMPI.B      #0, D4
+                BEQ         disRightDir
+                BNE         disLeftDir
+AsyShiftRet   
+
+RotShiftGroup
+                JSR         disRotateShift
+                
+                JSR         printDirection
+
+RotShiftRet
+
+
+
+ShiftGrpCount
+
+
+printImmData    
+*                JSR         printHashTag
+                JSR         XnCompare
+                                
+                
+                
+
+printDirection
+                CMPI.B      #0, D4
+                BEQ         disRightDir
+                BNE         disLeftDir
+printDirRet
+                RTS
+
+
+printSize
+                CMPI.B      #0, D5
+                BEQ         disByteSize
+                CMPI.B      #1, D5
+                BEQ         disWordSize
+                CMPI.B      #2, D5
+                BEQ         disLongSize
+                BNE         disError
+printSizeRet
+                RTS
+
+
 
 *----------------------------------------------------------------
 *                         Comparisons                           |
@@ -232,50 +365,50 @@ ModeCompare2    CMPI.B  #%010, D2
                 BNE     ModeCompare3
                 
 ModeCompare3    CMPI.B  #%011, D2
-                BEQ    disAnIndPostMode
+                BEQ    disAnPosMode
                 BNE     ModeCompare4
 
 ModeCompare4    CMPI.B  #%100, D2
-                BEQ    disAnIndPreMode
+                BEQ    disAnPreMode
                 BNE     ModeCompare5
                 
 ModeCompare5    CMPI.B  #%111, D2
-                BEQ    disEAmode
+*                BEQ    disEAmode
                 BNE     disError
 
              
 
 *---------------------Register Compare---------------------                
-XnCompare       CMPI.b  #%000, D0
-                BEQ     XnIs0
+XnCompare       CMPI.b  #%000, D3
+                BEQ     Print0
                 BNE     XnCompare1
                 
-XnCompare1      CMPI.b  #%001, D0
-                BEQ     XnIs1
+XnCompare1      CMPI.b  #%001, D3
+                BEQ     Print1
                 BNE     XnCompare2
 
-XnCompare2      CMPI.b  #%010, D0
-                BEQ     XnIs2
+XnCompare2      CMPI.b  #%010, D3
+                BEQ     Print2
                 BNE     XnCompare3
 
-XnCompare3      CMPI.b  #%011, D0
-                BEQ     XnIs3
+XnCompare3      CMPI.b  #%011, D3
+                BEQ     Print3
                 BNE     XnCompare4
 
-XnCompare4      CMPI.b  #%100, D0
-                BEQ     XnIs4
+XnCompare4      CMPI.b  #%100, D3
+                BEQ     Print4
                 BNE     XnCompare5
 
-XnCompare5      CMPI.b  #%101, D0
-                BEQ     XnIs5
+XnCompare5      CMPI.b  #%101, D3
+                BEQ     Print5
                 BNE     XnCompare6
 
-XnCompare6      CMPI.b  #%110, D0
-                BEQ     XnIs6
+XnCompare6      CMPI.b  #%110, D3
+                BEQ     Print6
                 BNE     XnCompare7
 
-XnCompare7      CMPI.b  #%111, D0
-                BEQ     XnIs7
+XnCompare7      CMPI.b  #%111, D3
+                BEQ     Print7
                 BNE     disError
                 * FIXME we may need to use this for a bad command BNE XnCompare1
 
@@ -297,7 +430,7 @@ disDnRegMode    JSR     disDnReg
 
                 JSR     XnCompare
                 
-disDnRegBack    CLR.L   D7
+                CLR.L   D7
                 RTS
 
 *-------------------
@@ -306,7 +439,7 @@ disAnRegMode    JSR     disAnReg
 
                 JSR     XnCompare
                 
-disAnRegBack    CLR.L   D7
+                CLR.L   D7
                 RTS
 
 *-------------------
@@ -316,7 +449,7 @@ disAnIndMode    JSR     disLeftParen
                 
                 JSR     XnCompare
                 
-disAnIndBack    CLR.L   D7
+                CLR.L   D7
                 
                 JSR     disRightParen
                 
@@ -329,7 +462,7 @@ disAnPosMode    JSR     disLeftParen
                 
                 JSR     XnCompare
                 
-disAnPosBack    CLR.L   D7
+                CLR.L   D7
                 
                 JSR     disRightParen
                 JSR     displayPlus
@@ -344,7 +477,7 @@ disAnPreMode    JSR     displayMinus
                 
                 JSR     XnCompare
                 
-disAnPreBack    CLR.L   D7
+                CLR.L   D7
                 
                 JSR     disRightParen
                 
@@ -410,49 +543,88 @@ displayLine     LEA     disNewLine, A1
                 
                 
 *-----------Numbers------------               
-print0           LEA     disZero, A1
+print0          LEA     disZero, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
                 
-print1           LEA     disOne, A1
+print1          LEA     disOne, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print2           LEA     disTwo, A1
+print2          LEA     disTwo, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print3           LEA     disThree, A1
+print3          LEA     disThree, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print4           LEA     disFour, A1
+print4          LEA     disFour, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print5           LEA     disFive, A1
+print5          LEA     disFive, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print6           LEA     disSix, A1
+print6          LEA     disSix, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-print7           LEA     disSeven, A1
+print7          LEA     disSeven, A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
 
-
+print8          LEA     disEight, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
                 
-              
+print9          LEA     disNine, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printA          LEA     disA, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printB          LEA     disB, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printC          LEA     disC, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printD          LEA     disD, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printE          LEA     disE, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+printF          LEA     disF, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+
+
 *----------OpCode-----------------                
 disMoveByte     LEA     MOVEByteDis, A1
                 MOVE.B  #14, D0
@@ -460,8 +632,63 @@ disMoveByte     LEA     MOVEByteDis, A1
                 RTS                
 
 
+disMoveWord     LEA     MOVEWordDis, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+disMoveLong     LEA     MOVELongDis, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+                
+disAsymmShift
+                LEA     AsymmShift, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+disLogicShift
+                LEA     logicShift, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
+
+disRotateShift                
+                LEA     rotateShift, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS                
+                
+                
+                
+
+*-----------Sizes------------------  
+disByteSize     LEA     byteSize, A1
+                Move.B  #14, D0
+                Trap    #15
+                RTS
+
+disWordSize     LEA     wordSize, A1
+                Move.B  #14, D0
+                Trap    #15
+                RTS
+
+disLongSize     LEA     longSize, A1
+                Move.B  #14, D0
+                Trap    #15
+                RTS
 
 
+*-----------Directions------------------         
+disLeftDir      LEA     leftDir, A1
+                Move.B  #14, D0
+                Trap    #15
+                BRA     printDirRet
+
+disRightDir     LEA     rightDir, A1
+                Move.B  #14, D0
+                Trap    #15
+                BRA     printDirRet
 
 
 *-----------Error------------------         
@@ -480,6 +707,23 @@ Error DC.B  'error', 0
 MOVEByteDis     DC.B    'MOVE.B ', 0
 MOVEWordDis     DC.B    'MOVE.W ', 0   
 MOVELongDis     DC.B    'MOVE.L ', 0
+
+AsymmShift      DC.B    'AS', 0
+
+logicShift      DC.B    'LS', 0
+
+rotateShift     DC.B    'RO', 0
+
+
+
+byteSize        DC.B    '.B ', 0
+wordSize        DC.B    '.W ', 0
+longSize        DC.B    '.L ', 0
+
+leftDir         DC.B    'L', 0
+rightDir        DC.B    'R', 0
+
+
 DnReg           DC.B    'D', 0
 AnReg           DC.B    'A', 0
 LeftParen       DC.B    '(', 0
@@ -500,10 +744,21 @@ disFour         DC.B    '4', 0
 disFive         DC.B    '5', 0
 disSix          DC.B    '6', 0
 disSeven        DC.B    '7', 0
+disEight        DC.B    '8', 0
+disNine         DC.B    '9', 0
+
+disA            DC.B    'A', 0
+disB            DC.B    'B', 0
+disC            DC.B    'C', 0
+disD            DC.B    'D', 0
+disE            DC.B    'E', 0
+disF            DC.B    'F', 0
 
 disNewLine      DC.B    '', 0
  
     END    START        ; last line of source
+
+
 
 
 
