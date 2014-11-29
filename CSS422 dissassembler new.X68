@@ -12,7 +12,7 @@ STARTPT   EQU $AA     *starting point
 ENDPT     EQU $55     *ending point
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %1110001000001111    * I made up bits 0 to 11      
+example   EQU %1110000000001111    * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -267,7 +267,13 @@ bitShiftType
 *-------------      store size bits
                 MOVE.B      D6, D5
                 LSR.B       #6, D5
+*--------------     store i/r
+                MOVE.B      D6, D7
+                LSL.B       #2, D7
+                LSR.B       #7, D7
 *-------------
+                
+*-------------      store type
                 MOVE.W      D6, D0             
                 LSR.W       #3, D0
                 MOVE.W      #14,D1
@@ -290,7 +296,9 @@ LogShiftGroup
                 JSR         printDirection
                 JSR         printSize
                 JSR         ShiftGrpCount
-                JSR         ShiftGrpDest
+                JSR         displayComma
+                JSR         displaySpace
+*               JSR         ShiftGrpDest
                 
 
 LogShiftRet            
@@ -315,11 +323,39 @@ RotShiftRet
 
 
 ShiftGrpCount
+                CMPI.B      #0, D7
+                BEQ         printImmData
+                BNE         printRegister    
 
 
 printImmData    
-*                JSR         printHashTag
-                JSR         XnCompare
+                JSR         printHashTag
+                JSR         printShiftRegNumber
+                RTS
+                                
+printRegister
+                JSR         disDnReg
+                JSR         printShiftRegNumber
+                RTS
+                
+printShiftRegNumber
+                JSR         disDnReg
+                
+                CMPI.B      #0, D1
+                BEQ         print8
+                MOVE.W      D6, D1
+                LSL.W       #4, D1
+                MOVE.B      #13, D2
+                LSR.W       D2, D1
+                MOVE.B      #3, D0
+                TRAP #15
+                
+                RTS
+                
+                
+
+
+     
                                 
                 
                 
@@ -623,7 +659,10 @@ printF          LEA     disF, A1
                 TRAP    #15
                 RTS
 
-
+print#          LEA     hashTag,A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
 
 *----------OpCode-----------------                
 disMoveByte     LEA     MOVEByteDis, A1
@@ -723,6 +762,7 @@ longSize        DC.B    '.L ', 0
 leftDir         DC.B    'L', 0
 rightDir        DC.B    'R', 0
 
+hashtag         DC.B    '#', 0
 
 DnReg           DC.B    'D', 0
 AnReg           DC.B    'A', 0
