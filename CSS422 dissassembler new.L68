@@ -1,576 +1,780 @@
 00001000 Starting Address
 Assembler used: EASy68K Editor/Assembler v5.15.02
-Created On: 11/28/2014 1:30:29 PM
+Created On: 11/28/2014 4:10:25 PM
 
 00000000                             1  *-----------------------------------------------------------
 00000000                             2  * Title      :CSS422 Project
 00000000                             3  * Written by :Nicholas Abel and Julio Perez
 00000000                             4  * Date       :November 7, 2014
 00000000                             5  * Description:Disassembler
-00000000                             6  *-----------------------------------------------------------
-00000000  =000000AA                  7  STARTPT   EQU $AA     *starting point
-00000000  =00000055                  8  ENDPT     EQU $55     *ending point
-00000000  =00000400                  9  temp      EQU $400    *location to work at
-00000000  =0000A000                 10  stack     EQU $A000
-00000000  =00001217                 11  example   EQU %0001001000010111    * I made up bits 0 to 11      
-00000000  =0000000C                 12  shift12   EQU 12                   * Shift 12 bits 
-00000000  =0000000A                 13  shift10   EQU 10                   * Shift 10 bits
-00000000  =0000000D                 14  shift13   EQU 13 
-00000000                            15  
-00000000                            16  
-00001000                            17          ORG    $1000
-00001000                            18  START:                          
-00001000                            19  *        LEA     ASKSTART, A1    *message to ask user for input
-00001000                            20  *        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
-00001000                            21  *        TRAP    #15             *Display A1 message
-00001000                            22  *        
-00001000                            23  *        MOVE.B  #4, D0          *input rule saves to D1
-00001000                            24  *        TRAP    #15             *initiate read from keyboard
-00001000                            25  *        
-00001000                            26  *        MOVE.B  D1, STARTPT        *save number to NUM1
-00001000                            27  *        
-00001000                            28  *        LEA     ASKEND, A1      *ask about ending memory location
-00001000                            29  *        MOVE.B  #13, D0         
-00001000                            30  *        TRAP    #15             *display A1
+00000000                             6  *
+00000000                             7  *Nomenclature:   | OpCode |     Part       | Job
+00000000                             8  *                | OpCode | Part | SubPart | Job
+00000000                             9  *
+00000000                            10  *-----------------------------------------------------------
+00000000  =000000AA                 11  STARTPT   EQU $AA     *starting point
+00000000  =00000055                 12  ENDPT     EQU $55     *ending point
+00000000  =00000400                 13  temp      EQU $400    *location to work at
+00000000  =0000A000                 14  stack     EQU $A000
+00000000  =0000E20F                 15  example   EQU %1110001000001111    * I made up bits 0 to 11      
+00000000  =0000000C                 16  shift12   EQU 12                   * Shift 12 bits 
+00000000  =0000000A                 17  shift10   EQU 10                   * Shift 10 bits
+00000000  =0000000D                 18  shift13   EQU 13 
+00000000                            19  
+00000000                            20  
+00001000                            21          ORG    $1000
+00001000                            22  START:                          
+00001000                            23  *        LEA     ASKSTART, A1    *message to ask user for input
+00001000                            24  *        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
+00001000                            25  *        TRAP    #15             *Display A1 message
+00001000                            26  *        
+00001000                            27  *        MOVE.B  #4, D0          *input rule saves to D1
+00001000                            28  *        TRAP    #15             *initiate read from keyboard
+00001000                            29  *        
+00001000                            30  *        MOVE.B  D1, STARTPT        *save number to NUM1
 00001000                            31  *        
-00001000                            32  *        MOVE.B  #4, D0          *
-00001000                            33  *        TRAP    #15
-00001000                            34  *        
-00001000                            35  *        MOVE.B  D1, ENDPT         *ending memory location stored
-00001000                            36  
-00001000  4FF9 0000A000             37          LEA     stack,SP        *Load the SP
-00001006  41F9 00001024             38          LEA     jmp_table,A0    *Index into the table
-0000100C                            39  
-0000100C  4280                      40          CLR.L   D0              *Zero it
-0000100E  4281                      41          CLR.L   D1
-00001010                            42   
-00001010                            43  *Get word size element
-00001010  3C3C 1217                 44              MOVE.W      #example,D6     *variable put in place        
-00001014  3006                      45              MOVE.W      D6, D0
-00001016  123C 000C                 46              MOVE.B      #shift12,D1       *Shift 12 bits to the right  
-0000101A  E268                      47              LSR.W       D1,D0           *Move the bits
-0000101C  C0FC 0006                 48              MULU        #6,D0       *Form offset     
-00001020                            49  
-00001020  4EB0 0000                 50              JSR         0(A0,D0)    *Jump indirect with index
-00001024                            51  * check read pointer location against EnDPt if end done
-00001024                            52  * otherwise move back into read sub routine
-00001024                            53                      
-00001024                            54  
-00001024                            55  *----------------------------------------------------------------
-00001024                            56  *                       OpCode ID Table                         |
-00001024                            57  *----------------------------------------------------------------
+00001000                            32  *        LEA     ASKEND, A1      *ask about ending memory location
+00001000                            33  *        MOVE.B  #13, D0         
+00001000                            34  *        TRAP    #15             *display A1
+00001000                            35  *        
+00001000                            36  *        MOVE.B  #4, D0          *
+00001000                            37  *        TRAP    #15
+00001000                            38  *        
+00001000                            39  *        MOVE.B  D1, ENDPT         *ending memory location stored
+00001000                            40  
+00001000  4FF9 0000A000             41          LEA     stack,SP        *Load the SP
+00001006  41F9 00001024             42          LEA     jmp_table,A0    *Index into the table
+0000100C                            43  
+0000100C  4280                      44          CLR.L   D0              *Zero it
+0000100E  4281                      45          CLR.L   D1
+00001010                            46   
+00001010                            47  *Get word size element
+00001010  3C3C E20F                 48              MOVE.W      #example,D6     *variable put in place        
+00001014  3006                      49              MOVE.W      D6, D0
+00001016  123C 000C                 50              MOVE.B      #shift12,D1       *Shift 12 bits to the right  
+0000101A  E268                      51              LSR.W       D1,D0           *Move the bits
+0000101C  C0FC 0006                 52              MULU        #6,D0       *Form offset     
+00001020                            53  
+00001020  4EB0 0000                 54              JSR         0(A0,D0)    *Jump indirect with index
+00001024                            55  * check read pointer location against EnDPt if end done
+00001024                            56  * otherwise move back into read sub routine
+00001024                            57                      
 00001024                            58  
-00001024                            59  
-00001024                            60  jmp_table  
-00001024                            61  
-00001024  4EF9 00001084             62                 JMP         code0000
-0000102A                            63  
-0000102A  4EF9 00001088             64                 JMP         code0001
-00001030                            65  
-00001030  4EF9 0000108C             66                 JMP         code0010
-00001036                            67  
-00001036  4EF9 00001090             68                 JMP         code0011
-0000103C                            69  
-0000103C  4EF9 00001094             70                 JMP         code0100
-00001042                            71  
-00001042  4EF9 00001098             72                 JMP         code0101
-00001048                            73  
-00001048  4EF9 0000109C             74                 JMP         code0110
-0000104E                            75  
-0000104E  4EF9 000010A0             76                 JMP         code0111
-00001054                            77  
-00001054  4EF9 000010A4             78                 JMP         code1000
-0000105A                            79  
-0000105A  4EF9 000010A8             80                 JMP         code1001
-00001060                            81  
-00001060  4EF9 000010AC             82                 JMP         code1010
-00001066                            83  
-00001066  4EF9 000010B0             84                 JMP         code1011
-0000106C                            85  
-0000106C  4EF9 000010B2             86                 JMP         code1100
-00001072                            87  
-00001072  4EF9 000010B6             88                 JMP         code1101
-00001078                            89  
-00001078  4EF9 000010BA             90                 JMP         code1110
-0000107E                            91  
-0000107E  4EF9 000010BE             92                 JMP         code1111
-00001084                            93  
-00001084                            94  *subroutines from jump table
-00001084                            95  
-00001084                            96  
-00001084  4E72 2700                 97  code0000       STOP        #$2700
-00001088                            98  
-00001088  6000 0038                 99  code0001       BRA         MoveByte
-0000108C                           100  
-0000108C  4E72 2700                101  code0010       STOP        #$2700
-00001090                           102  
-00001090  4E72 2700                103  code0011       STOP        #$2700
-00001094                           104  
-00001094  4E72 2700                105  code0100       STOP        #$2700
-00001098                           106  
-00001098  4E72 2700                107  code0101       STOP        #$2700
-0000109C                           108  
-0000109C  4E72 2700                109  code0110       STOP        #$2700
-000010A0                           110  
-000010A0  4E72 2700                111  code0111       STOP        #$2700
-000010A4                           112  
-000010A4  4E72 2700                113  code1000       STOP        #$2700
-000010A8                           114  
-000010A8  4E72 2700                115  code1001       STOP        #$2700
-000010AC                           116  
-000010AC  4E72 2700                117  code1010       STOP        #$2700
-000010B0                           118   
-000010B0  60FE                     119  code1011       BRA        code1011
-000010B2                           120  
-000010B2  4E72 2700                121  code1100       STOP        #$2700
-000010B6                           122  
-000010B6  4E72 2700                123  code1101       STOP        #$2700
-000010BA                           124  
-000010BA  4E72 2700                125  code1110       STOP        #$2700
-000010BE                           126  
-000010BE  4E72 2700                127  code1111       STOP        #$2700
-000010C2                           128  
-000010C2                           129   
-000010C2                           130  
-000010C2                           131  *----------------------------------------------------------------
-000010C2                           132  *                OpCode Breakdown Methods                       |
-000010C2                           133  *----------------------------------------------------------------
+00001024                            59  *----------------------------------------------------------------
+00001024                            60  *                       OpCode ID Table                         |
+00001024                            61  *----------------------------------------------------------------
+00001024                            62  
+00001024                            63  
+00001024                            64  jmp_table  
+00001024                            65  
+00001024  4EF9 00001084             66                 JMP         code0000
+0000102A                            67  
+0000102A  4EF9 00001088             68                 JMP         code0001
+00001030                            69  
+00001030  4EF9 0000108C             70                 JMP         code0010
+00001036                            71  
+00001036  4EF9 00001090             72                 JMP         code0011
+0000103C                            73  
+0000103C  4EF9 00001094             74                 JMP         code0100
+00001042                            75  
+00001042  4EF9 00001098             76                 JMP         code0101
+00001048                            77  
+00001048  4EF9 0000109C             78                 JMP         code0110
+0000104E                            79  
+0000104E  4EF9 000010A0             80                 JMP         code0111
+00001054                            81  
+00001054  4EF9 000010A4             82                 JMP         code1000
+0000105A                            83  
+0000105A  4EF9 000010A8             84                 JMP         code1001
+00001060                            85  
+00001060  4EF9 000010AC             86                 JMP         code1010
+00001066                            87  
+00001066  4EF9 000010B0             88                 JMP         code1011
+0000106C                            89  
+0000106C  4EF9 000010B2             90                 JMP         code1100
+00001072                            91  
+00001072  4EF9 000010B6             92                 JMP         code1101
+00001078                            93  
+00001078  4EF9 000010BA             94                 JMP         code1110
+0000107E                            95  
+0000107E  4EF9 000010BE             96                 JMP         code1111
+00001084                            97  
+00001084                            98  *subroutines from jump table
+00001084                            99  
+00001084                           100  
+00001084  4E72 0A8C                101  code0000       STOP        #2700
+00001088                           102  
+00001088  6000 0038                103  code0001       BRA         MoveByte
+0000108C                           104  
+0000108C  6000 0084                105  code0010       BRA         MoveLong
+00001090                           106  
+00001090  6000 0058                107  code0011       BRA         MoveWord
+00001094                           108  
+00001094  4E72 2700                109  code0100       STOP        #$2700
+00001098                           110  
+00001098  4E72 2700                111  code0101       STOP        #$2700
+0000109C                           112  
+0000109C  4E72 2700                113  code0110       STOP        #$2700
+000010A0                           114  
+000010A0  4E72 2700                115  code0111       STOP        #$2700
+000010A4                           116  
+000010A4  4E72 2700                117  code1000       STOP        #$2700
+000010A8                           118  
+000010A8  4E72 2700                119  code1001       STOP        #$2700
+000010AC                           120  
+000010AC  4E72 2700                121  code1010       STOP        #$2700
+000010B0                           122   
+000010B0  60FE                     123  code1011       BRA         code1011
+000010B2                           124  
+000010B2  4E72 2700                125  code1100       STOP        #$2700
+000010B6                           126  
+000010B6  4E72 2700                127  code1101       STOP        #$2700
+000010BA                           128  
+000010BA  6000 00E8                129  code1110       BRA         BitShiftGroup
+000010BE                           130  
+000010BE  4E72 2700                131  code1111       STOP        #$2700
+000010C2                           132  
+000010C2                           133   
 000010C2                           134  
-000010C2                           135  *--------------MOVE.B Decode-----------------------------
-000010C2                           136  
-000010C2  4EB9 00001384            137  MoveByte        JSR     disMoveByte
-000010C8                           138  
-000010C8                           139  *continue searching through the machine code for source then destination
-000010C8                           140  *because of writing format
-000010C8  4280                     141                  CLR.L   D0
-000010CA  4281                     142                  CLR.L   D1
-000010CC  3006                     143                  MOVE.W  D6, D0     *reallocate example to reconfigure for next step
-000010CE  4EB9 000010F0            144                  JSR     MoveSrcDecode * src decode
-000010D4  4EB9 000012EA            145                  JSR     displayComma
-000010DA  4EB9 000012F8            146                  JSR     displaySpace
-000010E0  4EB9 0000111A            147                  JSR     MoveDesDecode   *destination decode
-000010E6  4EB9 00001306            148                  JSR     displayLine 
-000010EC  4E71                     149                  NOP
-000010EE  4E75                     150                  RTS
-000010F0                           151           
-000010F0                           152  
-000010F0                           153  
-000010F0                           154  *----------------------------------------------------------------
-000010F0                           155  *                  MOVE   Decode Methods                        |
-000010F0                           156  *----------------------------------------------------------------
+000010C2                           135  *----------------------------------------------------------------
+000010C2                           136  *                OpCode Breakdown Methods                       |
+000010C2                           137  *----------------------------------------------------------------
+000010C2                           138  
+000010C2                           139  *--------------MOVE.B Decode-----------------------------
+000010C2                           140  
+000010C2  4EB9 000014C8            141  MoveByte        JSR     disMoveByte
+000010C8                           142  
+000010C8                           143  *continue searching through the machine code for source then destination
+000010C8                           144  *because of writing format
+000010C8  4EB9 0000113A            145                  JSR     MoveSrcDecode * src decode
+000010CE  4EB9 000013BE            146                  JSR     displayComma
+000010D4  4EB9 000013CC            147                  JSR     displaySpace
+000010DA  4EB9 0000116C            148                  JSR     MoveDesDecode   *destination decode
+000010E0  4EB9 000013DA            149                  JSR     displayLine 
+000010E6  4E71                     150                  NOP
+000010E8  4E75                     151                  RTS
+000010EA                           152           
+000010EA                           153  
+000010EA                           154  *--------------MOVE.W Decode-----------------------------
+000010EA                           155  
+000010EA  4EB9 000014D6            156  MoveWord        JSR     disMoveWord
 000010F0                           157  
-000010F0  6000 0002                158  MoveSrcDecode   BRA MoveSrcModeDecode
-000010F4                           159  
-000010F4                           160          
-000010F4                           161  MoveSrcModeDecode
-000010F4  3006                     162                  MOVE.W  D6, D0
-000010F6  EC58                     163                  ROR.W   #6, D0
-000010F8  123C 000A                164                  MOVE.B  #shift10,D1       *Shift 10 bits to the right  
-000010FC                           165  
-000010FC  E268                     166                  LSR.W   D1,D0           *Move the bits
-000010FE                           167                  
-000010FE  E648                     168                  LSR.W   #3, D0   *D2 now has the mode
-00001100  4EB9 0000115A            169                  JSR     ModeCompare
-00001106  6000 0002                170                  BRA     MoveSrcXnDecode    
-0000110A                           171  
-0000110A                           172  MoveSrcXnDecode
-0000110A  3006                     173                  MOVE.W  D6, D0
-0000110C  E658                     174                  ROR.W   #3, D0       * last three bits to isolate Xn
-0000110E                           175                  
-0000110E  123C 000D                176                  MOVE.B  #shift13, D1
-00001112  E268                     177                  LSR.W   D1,D0        *format is good last three bits in least signifant location
-00001114  6000 0080                178                  Bra     XnCompare
-00001118  4E75                     179                  RTS
-0000111A                           180  
-0000111A                           181  
-0000111A                           182  *------------
-0000111A  6000 0002                183  MoveDesDecode   BRA     MoveDesModeDecode        
-0000111E                           184          
-0000111E                           185  MoveDesModeDecode
-0000111E  1E3C 0001                186                  MOVE.B  #%1, D7  *set flag for destination    
-00001122  3006                     187                  MOVE.W  D6, D0
-00001124  123C 000C                188                  MOVE.B  #shift12, D1
-00001128  E278                     189                  ROR.W   D1, D0
-0000112A  123C 000A                190                  MOVE.B  #shift10, D1
-0000112E                           191                  
-0000112E  E268                     192                  LSR.W   D1, D0
-00001130                           193                  *must isolate the mode
-00001130  E658                     194                  ROR.W   #3, D0
-00001132  123C 000D                195                  MOVE.B  #shift13, D1
-00001136  E268                     196                  LSR.W   D1, D0       *mode isolated
-00001138                           197                  
-00001138  4EB9 0000115A            198                  JSR     ModeCompare
-0000113E  4E71                     199                  NOP
-00001140  6000 0002                200                  BRA     MoveDesXnDecode
-00001144                           201  
-00001144                           202  
-00001144                           203  MoveDesXnDecode
-00001144  3006                     204                  MOVE.W  D6,D0
-00001146  123C 000C                205                  MOVE.B  #shift12, D1
-0000114A  E278                     206                  ROR.W   D1, D0
-0000114C  123C 000D                207                  MOVE.B  #shift13, D1
-00001150                           208                  
-00001150  E268                     209                  LSR.W   D1, D0    *isolates Xn
-00001152                           210                  
-00001152  4EB9 00001196            211                  JSR      XnCompare
-00001158  4E75                     212                  RTS
-0000115A                           213  
-0000115A                           214  *----------------------------------------------------------------
-0000115A                           215  *                         Comparisons                           |
-0000115A                           216  *----------------------------------------------------------------
-0000115A                           217  
-0000115A                           218  
-0000115A                           219  *------------------Mode Comparisons -----------------------------------------
-0000115A                           220  
-0000115A  0C00 0000                221  ModeCompare     CMPI.B  #%000, D0 * last three are zeroes
-0000115E  6700 0096                222                  BEQ     disDnRegMode       *jump to subroutine for Data register Source
-00001162  6600 0002                223                  BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
-00001166                           224                  
-00001166  0C00 0001                225  ModeCompare1    CMPI.B  #%001, D0
-0000116A  6700 00A0                226                  BEQ     disAnRegMode
-0000116E  6600 0002                227                  BNE     ModeCompare2
-00001172                           228                  
-00001172  0C00 0002                229  ModeCompare2    CMPI.B  #%010, D0
-00001176  6700 00AA                230                  BEQ     disAnIndMode
-0000117A  6600 0002                231                  BNE     ModeCompare3
-0000117E                           232                  
-0000117E  0C00 0003                233  ModeCompare3    CMPI.B  #%011, D0
-00001182                           234                  *BEQ    disAnIndPostMode
-00001182  6600 0002                235                  BNE     ModeCompare4
-00001186                           236  
-00001186  0C00 0004                237  ModeCompare4    CMPI.B  #%100, D0
-0000118A                           238                  *BEQ    disAnIndPreMode
-0000118A  6600 0002                239                  BNE     ModeCompare5
-0000118E                           240                  
-0000118E  0C00 0007                241  ModeCompare5    CMPI.B  #%111, D0
-00001192                           242                  *BEQ    disEAmode
-00001192  6600 01FE                243                  BNE     disError
-00001196                           244  
-00001196                           245               
-00001196                           246  
-00001196                           247  *---------------------Register Compare---------------------                
-00001196  0C00 0000                248  XnCompare       CMPI.b  #%000, D0
-0000119A  6700 0178                249                  BEQ     XnIs0
-0000119E  6600 0002                250                  BNE     XnCompare1
-000011A2                           251                  
-000011A2  0C00 0001                252  XnCompare1      CMPI.b  #%001, D0
-000011A6  6700 017A                253                  BEQ     XnIs1
-000011AA  6600 0002                254                  BNE     XnCompare2
-000011AE                           255  
-000011AE  0C00 0002                256  XnCompare2      CMPI.b  #%010, D0
-000011B2  6700 017C                257                  BEQ     XnIs2
-000011B6  6600 0002                258                  BNE     XnCompare3
-000011BA                           259  
-000011BA  0C00 0003                260  XnCompare3      CMPI.b  #%011, D0
-000011BE  6700 017E                261                  BEQ     XnIs3
-000011C2  6600 0002                262                  BNE     XnCompare4
-000011C6                           263  
-000011C6  0C00 0004                264  XnCompare4      CMPI.b  #%100, D0
-000011CA  6700 0180                265                  BEQ     XnIs4
-000011CE  6600 0002                266                  BNE     XnCompare5
-000011D2                           267  
-000011D2  0C00 0005                268  XnCompare5      CMPI.b  #%101, D0
-000011D6  6700 0182                269                  BEQ     XnIs5
-000011DA  6600 0002                270                  BNE     XnCompare6
-000011DE                           271  
-000011DE  0C00 0006                272  XnCompare6      CMPI.b  #%110, D0
-000011E2  6700 0184                273                  BEQ     XnIs6
-000011E6  6600 0002                274                  BNE     XnCompare7
-000011EA                           275  
-000011EA  0C00 0007                276  XnCompare7      CMPI.b  #%111, D0
-000011EE  6700 0186                277                  BEQ     XnIs7
-000011F2  6600 019E                278                  BNE     disError
-000011F6                           279                  * FIXME we may need to use this for a bad command BNE XnCompare1
-000011F6                           280  
-000011F6                           281  
-000011F6                           282  *----------------------------------------------------------------
-000011F6                           283  *                          DISPLAYS                             |
-000011F6                           284  *----------------------------------------------------------------
-000011F6                           285  
-000011F6                           286  
-000011F6                           287  
-000011F6                           288  
-000011F6                           289  **---------------------MODE ShortCuts----------------------
-000011F6                           290  *
-000011F6                           291  *DnSrcDisXn       JSR     XnDecode
-000011F6                           292  *                 Bra     disDnRegBack
-000011F6                           293  *        
-000011F6                           294  *DnDesDisXn       JSR     DesXnDecode
-000011F6                           295  *                 Bra     disDnRegBack
-000011F6                           296  *                    
-000011F6                           297  *AnSrcDisXn       JSR     XnDecode
-000011F6                           298  *                 Bra     disAnRegBack
-000011F6                           299  *        
-000011F6                           300  *AnDesDisXn       JSR     DesXnDecode
-000011F6                           301  *                 Bra     disAnRegBack
-000011F6                           302  *
-000011F6                           303  *AnIndSrcDisXn    JSR     XnDecode
-000011F6                           304  *                 Bra     disAnIndBack
-000011F6                           305  *        
-000011F6                           306  *AnIndDesDisXn    JSR     DesXnDecode
-000011F6                           307  *                 Bra     disAnIndBack
-000011F6                           308  *
-000011F6                           309  *AnPreSrcDisXn    JSR     XnDecode
-000011F6                           310  *                 Bra     disAnPreBack
-000011F6                           311  *        
-000011F6                           312  *AnPreDesDisXn    JSR     DesXnDecode
-000011F6                           313  *                 Bra     disAnPreBack
-000011F6                           314  *
-000011F6                           315  *
-000011F6                           316  *AnPosSrcDisXn    JSR     XnDecode
-000011F6                           317  *                 Bra     disAnPosBack
-000011F6                           318  *        
-000011F6                           319  *AnPosDesDisXn    JSR     DesXnDecode
-000011F6                           320  *                 Bra     disAnPosBack                
-000011F6                           321  *
-000011F6                           322  *
-000011F6                           323  *---------------------MODE Displays----------------------
-000011F6                           324  
-000011F6                           325  
-000011F6                           326  *-------------------
-000011F6                           327  
-000011F6  4EB9 00001296            328  disDnRegMode    JSR     disDnReg
-000011FC                           329  
-000011FC  0C07 0001                330                  CMPI.B  #%1, D7
-Line 331 ERROR: Undefined symbol
-00001200  6700 F328                331                  BEQ     DnDesDisXn
-Line 332 ERROR: Undefined symbol
-00001204  6600 F324                332                  BNE     DnSrcDisXn
-00001208                           333                  
-00001208  4287                     334  disDnRegBack    CLR.L   D7
-0000120A  4E75                     335                  RTS
-0000120C                           336  
-0000120C                           337  *-------------------
-0000120C                           338                      
-0000120C  4EB9 000012A4            339  disAnRegMode    JSR     disAnReg
-00001212                           340  
-00001212  0C07 0001                341                  CMPI.B  #%1, D7
-Line 342 ERROR: Undefined symbol
-00001216  6700 F312                342                  BEQ     AnDesDisXn
-Line 343 ERROR: Undefined symbol
-0000121A  6600 F30E                343                  BNE     AnSrcDisXn
-0000121E                           344                  
-0000121E  4287                     345  disAnRegBack    CLR.L   D7
-00001220  4E75                     346                  RTS
-00001222                           347  
-00001222                           348  *-------------------
-00001222                           349  
-00001222  4EB9 000012B2            350  disAnIndMode    JSR     disLeftParen
-00001228  4EB9 000012A4            351                  JSR     disAnReg
-0000122E                           352                  
-0000122E  0C07 0001                353                  CMPI.B  #%1, D7
-Line 354 ERROR: Undefined symbol
-00001232  6700 F2F6                354                  BEQ     AnIndDesDisXn
-Line 355 ERROR: Undefined symbol
-00001236  6600 F2F2                355                  BNE     AnIndSrcDisXn
-0000123A                           356                  
-0000123A  4287                     357  disAnIndBack    CLR.L   D7
-0000123C                           358                  
-0000123C  4EB9 000012C0            359                  JSR     disRightParen
-00001242                           360                  
-00001242  4E75                     361                  RTS
-00001244                           362                  
-00001244                           363  *-------------------
-00001244                           364  
-00001244  4EB9 000012B2            365  disAnPosMode    JSR     disLeftParen
-0000124A  4EB9 000012A4            366                  JSR     disAnReg
-00001250                           367                  
-00001250  0C07 0001                368                  CMPI.B  #%1, D7
-Line 369 ERROR: Undefined symbol
-00001254  6700 F2D4                369                  BEQ     AnPosDesDisXn
-Line 370 ERROR: Undefined symbol
-00001258  6600 F2D0                370                  BNE     AnPosSrcDisXn
-0000125C                           371                  
-0000125C  4287                     372  disAnPosBack    CLR.L   D7
-0000125E                           373                  
-0000125E  4EB9 000012C0            374                  JSR     disRightParen
-00001264  4EB9 000012CE            375                  JSR     displayPlus
-0000126A                           376                  
-0000126A  4E75                     377                  RTS
-0000126C                           378  
-0000126C                           379  *-------------------
-0000126C                           380  
-0000126C  4EB9 000012DC            381  disAnPreMode    JSR     displayMinus
-00001272  4EB9 000012B2            382                  JSR     disLeftParen
-00001278  4EB9 000012A4            383                  JSR     disAnReg
-0000127E                           384                  
-0000127E  0C07 0001                385                  CMPI.B  #%1, D7
-Line 386 ERROR: Undefined symbol
-00001282  6700 F2A6                386                  BEQ     AnPreDesDisXn
-Line 387 ERROR: Undefined symbol
-00001286  6600 F2A2                387                  BNE     AnPreSrcDisXn
-0000128A                           388                  
-0000128A  4287                     389  disAnPreBack    CLR.L   D7
-0000128C                           390                  
-0000128C  4EB9 000012C0            391                  JSR     disRightParen
-00001292                           392                  
-00001292  4287                     393                  CLR.L   D7
-00001294  4E75                     394                  RTS
-00001296                           395                  
-00001296                           396  *-------------------
-00001296                           397  
-00001296                           398  
-00001296                           399        
-00001296                           400                        
-00001296                           401  *----------------------Register Displays---------------------- 
-00001296                           402  
-00001296                           403  
-00001296                           404  *------------------Characters--------------------------------
-00001296                           405  
-00001296  43F9 000013BE            406  disDnReg        LEA     DnReg, A1
-0000129C  103C 000E                407                  MOVE.B  #14, D0
-000012A0  4E4F                     408                  TRAP    #15
-000012A2  4E75                     409                  RTS
-000012A4                           410  
-000012A4                           411  
-000012A4  43F9 000013C0            412  disAnReg        LEA     AnReg, A1
-000012AA  103C 000E                413                  MOVE.B  #14, D0
-000012AE  4E4F                     414                  TRAP    #15
-000012B0  4E75                     415                  RTS
-000012B2                           416  
-000012B2  43F9 000013C2            417  disLeftParen    LEA     LeftParen, A1
-000012B8  103C 000E                418                  MOVE.B  #14, D0
-000012BC  4E4F                     419                  TRAP    #15
-000012BE  4E75                     420                  RTS
-000012C0                           421                  
-000012C0  43F9 000013C4            422  disRightParen   LEA     RightParen, A1
-000012C6  103C 000E                423                  MOVE.B  #14, D0
-000012CA  4E4F                     424                  TRAP    #15
-000012CC  4E75                     425                  RTS
-000012CE                           426                  
-000012CE                           427                
-000012CE  43F9 000013C6            428  displayPlus     LEA     disPlus, A1
-000012D4  103C 000E                429                  MOVE.B  #14, D0
-000012D8  4E4F                     430                  TRAP    #15
-000012DA  4E75                     431                  RTS
-000012DC                           432                  
-000012DC  43F9 000013C8            433  displayMinus    LEA     disMinus, A1
-000012E2  103C 000E                434                  MOVE.B  #14, D0
-000012E6  4E4F                     435                  TRAP    #15
-000012E8  4E75                     436                  RTS
-000012EA                           437  
-000012EA  43F9 000013CA            438  displayComma    LEA     disComma, A1
-000012F0  103C 000E                439                  MOVE.B  #14, D0
-000012F4  4E4F                     440                  TRAP    #15
-000012F6  4E75                     441                  RTS
-000012F8                           442                  
-000012F8  43F9 000013CC            443  displaySpace    LEA     disSpace, A1
-000012FE  103C 000E                444                  MOVE.B  #14, D0
-00001302  4E4F                     445                  TRAP    #15
-00001304  4E75                     446                  RTS
-00001306                           447                  
-00001306  43F9 0000142C            448  displayLine     LEA     disNewLine, A1
-0000130C  103C 0000                449                  MOVE.B  #0, D0
-00001310  4E4F                     450                  TRAP    #15
-00001312  4E75                     451                  RTS
-00001314                           452                  
-00001314                           453                  
-00001314                           454  *-----------Numbers------------               
-00001314  43F9 0000141C            455  XnIs0           LEA     disZero, A1
-0000131A  103C 000E                456                  MOVE.B  #14, D0
-0000131E  4E4F                     457                  TRAP    #15
-00001320  4E75                     458                  RTS
-00001322                           459                  
-00001322  43F9 0000141E            460  XnIs1           LEA     disOne, A1
-00001328  103C 000E                461                  MOVE.B  #14, D0
-0000132C  4E4F                     462                  TRAP    #15
-0000132E  4E75                     463                  RTS
-00001330                           464  
-00001330  43F9 00001420            465  XnIs2           LEA     disTwo, A1
-00001336  103C 000E                466                  MOVE.B  #14, D0
-0000133A  4E4F                     467                  TRAP    #15
-0000133C  4E75                     468                  RTS
-0000133E                           469  
-0000133E  43F9 00001422            470  XnIs3           LEA     disThree, A1
-00001344  103C 000E                471                  MOVE.B  #14, D0
-00001348  4E4F                     472                  TRAP    #15
-0000134A  4E75                     473                  RTS
-0000134C                           474  
-0000134C  43F9 00001424            475  XnIs4           LEA     disFour, A1
-00001352  103C 000E                476                  MOVE.B  #14, D0
-00001356  4E4F                     477                  TRAP    #15
-00001358  4E75                     478                  RTS
-0000135A                           479  
-0000135A  43F9 00001426            480  XnIs5           LEA     disFive, A1
-00001360  103C 000E                481                  MOVE.B  #14, D0
-00001364  4E4F                     482                  TRAP    #15
-00001366  4E75                     483                  RTS
-00001368                           484  
-00001368  43F9 00001428            485  XnIs6           LEA     disSix, A1
-0000136E  103C 000E                486                  MOVE.B  #14, D0
-00001372  4E4F                     487                  TRAP    #15
-00001374  4E75                     488                  RTS
-00001376                           489  
-00001376  43F9 0000142A            490  XnIs7           LEA     disSeven, A1
-0000137C  103C 000E                491                  MOVE.B  #14, D0
-00001380  4E4F                     492                  TRAP    #15
-00001382  4E75                     493                  RTS
-00001384                           494  
-00001384                           495  
-00001384                           496                  
-00001384                           497                
-00001384                           498  *----------OpCode-----------------                
-00001384  43F9 000013A6            499  disMoveByte     LEA     MOVEByteDis, A1
-0000138A  103C 000E                500                  MOVE.B  #14, D0
-0000138E  4E4F                     501                  TRAP    #15
-00001390  4E75                     502                  RTS                
-00001392                           503  
-00001392                           504  
-00001392                           505  
-00001392                           506  
-00001392                           507  
-00001392                           508  
-00001392                           509  *-----------Error------------------         
-00001392  43F9 000013A0            510  disError        LEA     Error, A1
-00001398  103C 000E                511                  Move.B  #14, D0
-0000139C  4E4F                     512                  Trap    #15
-0000139E  4E75                     513                  RTS          
-000013A0                           514           
-000013A0                           515  *----------------------------------------------------------------
-000013A0                           516  *                         String constants                      |
-000013A0                           517  *----------------------------------------------------------------
-000013A0                           518  
-000013A0                           519  * Put variables and constants here
-000013A0= 65 72 72 6F 72 00        520  Error DC.B  'error', 0
-000013A6                           521  
-000013A6= 4D 4F 56 45 2E 42 ...    522  MOVEByteDis     DC.B    'MOVE.B ', 0
-000013AE= 4D 4F 56 45 2E 57 ...    523  MOVEWordDis     DC.B    'MOVE.W ', 0   
-000013B6= 4D 4F 56 45 2E 4C ...    524  MOVELongDis     DC.B    'MOVE.L ', 0
-000013BE= 44 00                    525  DnReg           DC.B    'D', 0
-000013C0= 41 00                    526  AnReg           DC.B    'A', 0
-000013C2= 28 00                    527  LeftParen       DC.B    '(', 0
-000013C4= 29 00                    528  RightParen      DC.B    ')', 0
-000013C6= 2B 00                    529  disPlus         DC.B    '+', 0
-000013C8= 2D 00                    530  disMinus        DC.B    '-', 0
-000013CA= 2C 00                    531  disComma        DC.B    ',', 0
-000013CC= 20 00                    532  disSpace        DC.B    ' ', 0
-000013CE= 49 64 65 6E 74 69 ...    533  ASKSTART        DC.B    'Identify the starting memory location: ', 0
-000013F6= 49 64 65 6E 74 69 ...    534  ASKEND          DC.B    'Identify the ending memory location: ', 0
-0000141C                           535  
-0000141C                           536  *numbers
-0000141C= 30 00                    537  disZero         DC.B    '0', 0
-0000141E= 31 00                    538  disOne          DC.B    '1', 0
-00001420= 32 00                    539  disTwo          DC.B    '2', 0
-00001422= 33 00                    540  disThree        DC.B    '3', 0
-00001424= 34 00                    541  disFour         DC.B    '4', 0
-00001426= 35 00                    542  disFive         DC.B    '5', 0
-00001428= 36 00                    543  disSix          DC.B    '6', 0
-0000142A= 37 00                    544  disSeven        DC.B    '7', 0
-0000142C                           545  
-0000142C= 00                       546  disNewLine      DC.B    '', 0
-0000142D                           547   
-0000142D                           548      END    START        ; last line of source
+000010F0  4EB9 0000113A            158                  JSR     MoveSrcDecode * src decode
+000010F6  4EB9 000013BE            159                  JSR     displayComma
+000010FC  4EB9 000013CC            160                  JSR     displaySpace
+00001102  4EB9 0000116C            161                  JSR     MoveDesDecode   *destination decode
+00001108  4EB9 000013DA            162                  JSR     displayLine 
+0000110E  4E71                     163                  NOP
+00001110  4E75                     164                  RTS
+00001112                           165                  
+00001112                           166                  
+00001112                           167  *--------------MOVE.L Decode-----------------------------
+00001112                           168  
+00001112  4EB9 000014E4            169  MoveLong        JSR     disMoveLong
+00001118                           170  
+00001118  4EB9 0000113A            171                  JSR     MoveSrcDecode * src decode
+0000111E  4EB9 000013BE            172                  JSR     displayComma
+00001124  4EB9 000013CC            173                  JSR     displaySpace
+0000112A  4EB9 0000116C            174                  JSR     MoveDesDecode   *destination decode
+00001130  4EB9 000013DA            175                  JSR     displayLine 
+00001136  4E71                     176                  NOP
+00001138  4E75                     177                  RTS
+0000113A                           178  
+0000113A                           179  *----------------------------------------------------------------
+0000113A                           180  *                  MOVE   Decode Methods                        |
+0000113A                           181  *----------------------------------------------------------------
+0000113A                           182  
+0000113A  6000 0002                183  MoveSrcDecode   BRA MoveSrcXnDecode
+0000113E                           184  
+0000113E                           185  MoveSrcXnDecode
+0000113E  4240                     186                  CLR     D0
+00001140  4241                     187                  CLR     D1
+00001142  3006                     188                  MOVE.W  D6, D0
+00001144  E658                     189                  ROR.W   #3, D0       * last three bits to isolate Xn
+00001146                           190                  
+00001146  123C 000D                191                  MOVE.B  #shift13, D1
+0000114A  E268                     192                  LSR.W   D1,D0        *format is good last three bits in least signifant location
+0000114C  3600                     193                  MOVE.W  D0, D3
+0000114E  6000 0002                194                  BRA     MoveSrcModeDecode
+00001152                           195        
+00001152                           196  MoveSrcModeDecode
+00001152  4240                     197                  CLR     D0
+00001154  4241                     198                  CLR     D1
+00001156  3006                     199                  MOVE.W  D6, D0
+00001158  EC58                     200                  ROR.W   #6, D0
+0000115A  123C 000A                201                  MOVE.B  #shift10,D1     *Prepare D1 for shifting 10
+0000115E                           202  
+0000115E  E268                     203                  LSR.W   D1,D0           *Shift D0 #10 bits to the right
+00001160                           204                  
+00001160  E648                     205                  LSR.W   #3, D0   *D2 now has the mode
+00001162  3400                     206                  MOVE.W  D0, D2
+00001164  4EB9 0000124E            207                  JSR     ModeCompare
+0000116A  4E75                     208                  RTS    
+0000116C                           209  
+0000116C                           210  
+0000116C                           211  
+0000116C                           212  
+0000116C                           213  *------------
+0000116C  6000 0002                214  MoveDesDecode   BRA     MoveDesXnDecode        
+00001170                           215  
+00001170                           216  
+00001170                           217  
+00001170                           218  MoveDesXnDecode
+00001170  3006                     219                  MOVE.W  D6,D0
+00001172  123C 000C                220                  MOVE.B  #shift12, D1
+00001176  E278                     221                  ROR.W   D1, D0
+00001178  123C 000D                222                  MOVE.B  #shift13, D1
+0000117C                           223                  
+0000117C  E268                     224                  LSR.W   D1, D0    *isolates Xn
+0000117E  3600                     225                  MOVE.W  D0, D3
+00001180                           226                  
+00001180  6000 0002                227                  BRA     MoveDesModeDecode
+00001184                           228          
+00001184                           229  MoveDesModeDecode  
+00001184  3006                     230                  MOVE.W  D6, D0
+00001186  123C 000C                231                  MOVE.B  #shift12, D1
+0000118A  E278                     232                  ROR.W   D1, D0
+0000118C  123C 000A                233                  MOVE.B  #shift10, D1
+00001190                           234                  
+00001190  E268                     235                  LSR.W   D1, D0
+00001192                           236                  *must isolate the mode
+00001192  E658                     237                  ROR.W   #3, D0
+00001194  123C 000D                238                  MOVE.B  #shift13, D1
+00001198  E268                     239                  LSR.W   D1, D0       *mode isolated
+0000119A  3400                     240                  MOVE.W  D0, D2
+0000119C  4EB9 0000124E            241                  JSR     ModeCompare
+000011A2  4E75                     242                  RTS
+000011A4                           243  
+000011A4                           244  
+000011A4                           245  
+000011A4                           246  
+000011A4                           247  
+000011A4                           248  
+000011A4                           249  *--------------BitShiftingGroup Decode-----------------------------
+000011A4                           250  
+000011A4  6000 0002                251  bitShiftGroup            BRA bitShiftType
+000011A8                           252  
+000011A8                           253  bitShiftType
+000011A8  4240                     254                  CLR         D0
+000011AA  4241                     255                  CLR         D1
+000011AC  4242                     256                  CLR         D2  *    
+000011AE  4243                     257                  CLR         D3  *
+000011B0  4244                     258                  CLR         D4  *will store direction of opcode
+000011B2  4245                     259                  CLR         D5  *size
+000011B4  4247                     260                  CLR         D7  *i/r
+000011B6                           261                  
+000011B6                           262  *------------       store direction bit               
+000011B6  3806                     263                  MOVE.W      D6, D4
+000011B8  EF4C                     264                  LSL.W       #7, D4
+000011BA  123C 000F                265                  MOVE.B      #15, D1
+000011BE  E26C                     266                  LSR.W       D1, D4
+000011C0                           267  *-------------      store size bits
+000011C0  1A06                     268                  MOVE.B      D6, D5
+000011C2  EC0D                     269                  LSR.B       #6, D5
+000011C4                           270  *-------------
+000011C4  3006                     271                  MOVE.W      D6, D0             
+000011C6  E648                     272                  LSR.W       #3, D0
+000011C8  323C 000E                273                  MOVE.W      #14,D1
+000011CC  E368                     274                  LSL.W       D1, D0
+000011CE  E268                     275                  LSR.W       D1, D0
+000011D0  6000 0002                276                  BRA         BitShiftTypeCompare
+000011D4                           277  
+000011D4                           278                                 
+000011D4                           279  BitShiftTypeCompare
+000011D4  0C00 0001                280                  CMPI.B      #%01, D0
+000011D8  6700 0012                281                  BEQ         LogShiftGroup
+000011DC  0C00 0000                282                  CMPI.B      #%00, D0
+000011E0  6700 001C                283                  BEQ         AsyShiftGroup
+000011E4  0C00 0003                284                  CMPI.B      #%11, D0
+000011E8  6700 0026                285                  BEQ         RotShiftGroup
+000011EC                           286                  
+000011EC                           287  
+000011EC                           288  LogShiftGroup
+000011EC  4EB9 00001500            289                  JSR         disLogicShift
+000011F2                           290                  
+000011F2  4EB9 00001222            291                  JSR         printDirection
+000011F8  4EB9 00001230            292                  JSR         printSize
+000011FE                           293                  
+000011FE                           294  
+000011FE                           295  LogShiftRet            
+000011FE                           296                  
+000011FE                           297  
+000011FE                           298  
+000011FE                           299  AsyShiftGroup
+000011FE  4EB9 000014F2            300                  JSR         disAsymmShift
+00001204                           301                  
+00001204  0C04 0000                302                  CMPI.B      #0, D4
+00001208  6700 034C                303                  BEQ         disRightDir
+0000120C  6600 0338                304                  BNE         disLeftDir
+00001210                           305  AsyShiftRet   
+00001210                           306  
+00001210                           307  RotShiftGroup
+00001210  4EB9 0000150E            308                  JSR         disRotateShift
+00001216                           309                  
+00001216  4EB9 00001222            310                  JSR         printDirection
+0000121C                           311  
+0000121C                           312  RotShiftRet
+0000121C                           313  
+0000121C                           314  
+0000121C                           315  
+0000121C                           316  printImmData    
+0000121C                           317  *                JSR         printHashTag
+0000121C  4EB9 00001292            318                  JSR         XnCompare
+00001222                           319                                  
+00001222                           320                  
+00001222                           321                  
+00001222                           322  
+00001222                           323  printDirection
+00001222  0C04 0000                324                  CMPI.B      #0, D4
+00001226  6700 032E                325                  BEQ         disRightDir
+0000122A  6600 031A                326                  BNE         disLeftDir
+0000122E                           327  printDirRet
+0000122E  4E75                     328                  RTS
+00001230                           329  
+00001230                           330  
+00001230                           331  printSize
+00001230  0C05 0000                332                  CMPI.B      #0, D5
+00001234  6700 02E6                333                  BEQ         disByteSize
+00001238  0C05 0001                334                  CMPI.B      #1, D5
+0000123C  6700 02EC                335                  BEQ         disWordSize
+00001240  0C05 0002                336                  CMPI.B      #2, D5
+00001244  6700 02F2                337                  BEQ         disLongSize
+00001248  6600 031C                338                  BNE         disError
+0000124C                           339  printSizeRet
+0000124C  4E75                     340                  RTS
+0000124E                           341  
+0000124E                           342  
+0000124E                           343  
+0000124E                           344  *----------------------------------------------------------------
+0000124E                           345  *                         Comparisons                           |
+0000124E                           346  *----------------------------------------------------------------
+0000124E                           347  
+0000124E                           348  
+0000124E                           349  *------------------Mode Comparisons -----------------------------------------
+0000124E                           350  
+0000124E  0C02 0000                351  ModeCompare     CMPI.B  #%000, D2 * last three are zeroes
+00001252  6700 009E                352                  BEQ     disDnRegMode       *jump to subroutine for Data register Source
+00001256  6600 0002                353                  BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
+0000125A                           354                  
+0000125A  0C02 0001                355  ModeCompare1    CMPI.B  #%001, D2
+0000125E  6700 00A0                356                  BEQ     disAnRegMode
+00001262  6600 0002                357                  BNE     ModeCompare2
+00001266                           358                  
+00001266  0C02 0002                359  ModeCompare2    CMPI.B  #%010, D2
+0000126A  6700 00A2                360                  BEQ     disAnIndMode
+0000126E  6600 0002                361                  BNE     ModeCompare3
+00001272                           362                  
+00001272  0C02 0003                363  ModeCompare3    CMPI.B  #%011, D2
+00001276  6700 00B0                364                  BEQ    disAnPosMode
+0000127A  6600 0002                365                  BNE     ModeCompare4
+0000127E                           366  
+0000127E  0C02 0004                367  ModeCompare4    CMPI.B  #%100, D2
+00001282  6700 00C4                368                  BEQ    disAnPreMode
+00001286  6600 0002                369                  BNE     ModeCompare5
+0000128A                           370                  
+0000128A  0C02 0007                371  ModeCompare5    CMPI.B  #%111, D2
+0000128E                           372  *                BEQ    disEAmode
+0000128E  6600 02D6                373                  BNE     disError
+00001292                           374  
+00001292                           375               
+00001292                           376  
+00001292                           377  *---------------------Register Compare---------------------                
+00001292  0C03 0000                378  XnCompare       CMPI.b  #%000, D3
+00001296  6700 0150                379                  BEQ     Print0
+0000129A  6600 0002                380                  BNE     XnCompare1
+0000129E                           381                  
+0000129E  0C03 0001                382  XnCompare1      CMPI.b  #%001, D3
+000012A2  6700 0152                383                  BEQ     Print1
+000012A6  6600 0002                384                  BNE     XnCompare2
+000012AA                           385  
+000012AA  0C03 0002                386  XnCompare2      CMPI.b  #%010, D3
+000012AE  6700 0154                387                  BEQ     Print2
+000012B2  6600 0002                388                  BNE     XnCompare3
+000012B6                           389  
+000012B6  0C03 0003                390  XnCompare3      CMPI.b  #%011, D3
+000012BA  6700 0156                391                  BEQ     Print3
+000012BE  6600 0002                392                  BNE     XnCompare4
+000012C2                           393  
+000012C2  0C03 0004                394  XnCompare4      CMPI.b  #%100, D3
+000012C6  6700 0158                395                  BEQ     Print4
+000012CA  6600 0002                396                  BNE     XnCompare5
+000012CE                           397  
+000012CE  0C03 0005                398  XnCompare5      CMPI.b  #%101, D3
+000012D2  6700 015A                399                  BEQ     Print5
+000012D6  6600 0002                400                  BNE     XnCompare6
+000012DA                           401  
+000012DA  0C03 0006                402  XnCompare6      CMPI.b  #%110, D3
+000012DE  6700 015C                403                  BEQ     Print6
+000012E2  6600 0002                404                  BNE     XnCompare7
+000012E6                           405  
+000012E6  0C03 0007                406  XnCompare7      CMPI.b  #%111, D3
+000012EA  6700 015E                407                  BEQ     Print7
+000012EE  6600 0276                408                  BNE     disError
+000012F2                           409                  * FIXME we may need to use this for a bad command BNE XnCompare1
+000012F2                           410  
+000012F2                           411  
+000012F2                           412  *----------------------------------------------------------------
+000012F2                           413  *                          DISPLAYS                             |
+000012F2                           414  *----------------------------------------------------------------
+000012F2                           415  
+000012F2                           416  
+000012F2                           417            
+000012F2                           418  
+000012F2                           419  
+000012F2                           420  *---------------------MODE Displays----------------------
+000012F2                           421  
+000012F2                           422  
+000012F2                           423  *-------------------
+000012F2                           424  
+000012F2  4EB9 0000136A            425  disDnRegMode    JSR     disDnReg
+000012F8                           426  
+000012F8  4EB8 1292                427                  JSR     XnCompare
+000012FC                           428                  
+000012FC  4287                     429                  CLR.L   D7
+000012FE  4E75                     430                  RTS
+00001300                           431  
+00001300                           432  *-------------------
+00001300                           433                      
+00001300  4EB9 00001378            434  disAnRegMode    JSR     disAnReg
+00001306                           435  
+00001306  4EB8 1292                436                  JSR     XnCompare
+0000130A                           437                  
+0000130A  4287                     438                  CLR.L   D7
+0000130C  4E75                     439                  RTS
+0000130E                           440  
+0000130E                           441  *-------------------
+0000130E                           442  
+0000130E  4EB9 00001386            443  disAnIndMode    JSR     disLeftParen
+00001314  4EB9 00001378            444                  JSR     disAnReg
+0000131A                           445                  
+0000131A  4EB8 1292                446                  JSR     XnCompare
+0000131E                           447                  
+0000131E  4287                     448                  CLR.L   D7
+00001320                           449                  
+00001320  4EB9 00001394            450                  JSR     disRightParen
+00001326                           451                  
+00001326  4E75                     452                  RTS
+00001328                           453                  
+00001328                           454  *-------------------
+00001328                           455  
+00001328  4EB9 00001386            456  disAnPosMode    JSR     disLeftParen
+0000132E  4EB9 00001378            457                  JSR     disAnReg
+00001334                           458                  
+00001334  4EB8 1292                459                  JSR     XnCompare
+00001338                           460                  
+00001338  4287                     461                  CLR.L   D7
+0000133A                           462                  
+0000133A  4EB9 00001394            463                  JSR     disRightParen
+00001340  4EB9 000013A2            464                  JSR     displayPlus
+00001346                           465                  
+00001346  4E75                     466                  RTS
+00001348                           467  
+00001348                           468  *-------------------
+00001348                           469  
+00001348  4EB9 000013B0            470  disAnPreMode    JSR     displayMinus
+0000134E  4EB9 00001386            471                  JSR     disLeftParen
+00001354  4EB9 00001378            472                  JSR     disAnReg
+0000135A                           473                  
+0000135A  4EB8 1292                474                  JSR     XnCompare
+0000135E                           475                  
+0000135E  4287                     476                  CLR.L   D7
+00001360                           477                  
+00001360  4EB9 00001394            478                  JSR     disRightParen
+00001366                           479                  
+00001366  4287                     480                  CLR.L   D7
+00001368  4E75                     481                  RTS
+0000136A                           482                  
+0000136A                           483  *-------------------
+0000136A                           484  
+0000136A                           485  
+0000136A                           486        
+0000136A                           487                        
+0000136A                           488  *----------------------Register Displays---------------------- 
+0000136A                           489  
+0000136A                           490  
+0000136A                           491  *------------------Characters--------------------------------
+0000136A                           492  
+0000136A  43F9 000015AB            493  disDnReg        LEA     DnReg, A1
+00001370  103C 000E                494                  MOVE.B  #14, D0
+00001374  4E4F                     495                  TRAP    #15
+00001376  4E75                     496                  RTS
+00001378                           497  
+00001378                           498  
+00001378  43F9 000015AD            499  disAnReg        LEA     AnReg, A1
+0000137E  103C 000E                500                  MOVE.B  #14, D0
+00001382  4E4F                     501                  TRAP    #15
+00001384  4E75                     502                  RTS
+00001386                           503  
+00001386  43F9 000015AF            504  disLeftParen    LEA     LeftParen, A1
+0000138C  103C 000E                505                  MOVE.B  #14, D0
+00001390  4E4F                     506                  TRAP    #15
+00001392  4E75                     507                  RTS
+00001394                           508                  
+00001394  43F9 000015B1            509  disRightParen   LEA     RightParen, A1
+0000139A  103C 000E                510                  MOVE.B  #14, D0
+0000139E  4E4F                     511                  TRAP    #15
+000013A0  4E75                     512                  RTS
+000013A2                           513                  
+000013A2                           514                
+000013A2  43F9 000015B3            515  displayPlus     LEA     disPlus, A1
+000013A8  103C 000E                516                  MOVE.B  #14, D0
+000013AC  4E4F                     517                  TRAP    #15
+000013AE  4E75                     518                  RTS
+000013B0                           519                  
+000013B0  43F9 000015B5            520  displayMinus    LEA     disMinus, A1
+000013B6  103C 000E                521                  MOVE.B  #14, D0
+000013BA  4E4F                     522                  TRAP    #15
+000013BC  4E75                     523                  RTS
+000013BE                           524  
+000013BE  43F9 000015B7            525  displayComma    LEA     disComma, A1
+000013C4  103C 000E                526                  MOVE.B  #14, D0
+000013C8  4E4F                     527                  TRAP    #15
+000013CA  4E75                     528                  RTS
+000013CC                           529                  
+000013CC  43F9 000015B9            530  displaySpace    LEA     disSpace, A1
+000013D2  103C 000E                531                  MOVE.B  #14, D0
+000013D6  4E4F                     532                  TRAP    #15
+000013D8  4E75                     533                  RTS
+000013DA                           534                  
+000013DA  43F9 00001629            535  displayLine     LEA     disNewLine, A1
+000013E0  103C 0000                536                  MOVE.B  #0, D0
+000013E4  4E4F                     537                  TRAP    #15
+000013E6  4E75                     538                  RTS
+000013E8                           539                  
+000013E8                           540                  
+000013E8                           541  *-----------Numbers------------               
+000013E8  43F9 00001609            542  print0          LEA     disZero, A1
+000013EE  103C 000E                543                  MOVE.B  #14, D0
+000013F2  4E4F                     544                  TRAP    #15
+000013F4  4E75                     545                  RTS
+000013F6                           546                  
+000013F6  43F9 0000160B            547  print1          LEA     disOne, A1
+000013FC  103C 000E                548                  MOVE.B  #14, D0
+00001400  4E4F                     549                  TRAP    #15
+00001402  4E75                     550                  RTS
+00001404                           551  
+00001404  43F9 0000160D            552  print2          LEA     disTwo, A1
+0000140A  103C 000E                553                  MOVE.B  #14, D0
+0000140E  4E4F                     554                  TRAP    #15
+00001410  4E75                     555                  RTS
+00001412                           556  
+00001412  43F9 0000160F            557  print3          LEA     disThree, A1
+00001418  103C 000E                558                  MOVE.B  #14, D0
+0000141C  4E4F                     559                  TRAP    #15
+0000141E  4E75                     560                  RTS
+00001420                           561  
+00001420  43F9 00001611            562  print4          LEA     disFour, A1
+00001426  103C 000E                563                  MOVE.B  #14, D0
+0000142A  4E4F                     564                  TRAP    #15
+0000142C  4E75                     565                  RTS
+0000142E                           566  
+0000142E  43F9 00001613            567  print5          LEA     disFive, A1
+00001434  103C 000E                568                  MOVE.B  #14, D0
+00001438  4E4F                     569                  TRAP    #15
+0000143A  4E75                     570                  RTS
+0000143C                           571  
+0000143C  43F9 00001615            572  print6          LEA     disSix, A1
+00001442  103C 000E                573                  MOVE.B  #14, D0
+00001446  4E4F                     574                  TRAP    #15
+00001448  4E75                     575                  RTS
+0000144A                           576  
+0000144A  43F9 00001617            577  print7          LEA     disSeven, A1
+00001450  103C 000E                578                  MOVE.B  #14, D0
+00001454  4E4F                     579                  TRAP    #15
+00001456  4E75                     580                  RTS
+00001458                           581  
+00001458  43F9 00001619            582  print8          LEA     disEight, A1
+0000145E  103C 000E                583                  MOVE.B  #14, D0
+00001462  4E4F                     584                  TRAP    #15
+00001464  4E75                     585                  RTS
+00001466                           586                  
+00001466  43F9 0000161B            587  print9          LEA     disNine, A1
+0000146C  103C 000E                588                  MOVE.B  #14, D0
+00001470  4E4F                     589                  TRAP    #15
+00001472  4E75                     590                  RTS
+00001474                           591  
+00001474  43F9 0000161D            592  printA          LEA     disA, A1
+0000147A  103C 000E                593                  MOVE.B  #14, D0
+0000147E  4E4F                     594                  TRAP    #15
+00001480  4E75                     595                  RTS
+00001482                           596  
+00001482  43F9 0000161F            597  printB          LEA     disB, A1
+00001488  103C 000E                598                  MOVE.B  #14, D0
+0000148C  4E4F                     599                  TRAP    #15
+0000148E  4E75                     600                  RTS
+00001490                           601  
+00001490  43F9 00001621            602  printC          LEA     disC, A1
+00001496  103C 000E                603                  MOVE.B  #14, D0
+0000149A  4E4F                     604                  TRAP    #15
+0000149C  4E75                     605                  RTS
+0000149E                           606  
+0000149E  43F9 00001623            607  printD          LEA     disD, A1
+000014A4  103C 000E                608                  MOVE.B  #14, D0
+000014A8  4E4F                     609                  TRAP    #15
+000014AA  4E75                     610                  RTS
+000014AC                           611  
+000014AC  43F9 00001625            612  printE          LEA     disE, A1
+000014B2  103C 000E                613                  MOVE.B  #14, D0
+000014B6  4E4F                     614                  TRAP    #15
+000014B8  4E75                     615                  RTS
+000014BA                           616  
+000014BA  43F9 00001627            617  printF          LEA     disF, A1
+000014C0  103C 000E                618                  MOVE.B  #14, D0
+000014C4  4E4F                     619                  TRAP    #15
+000014C6  4E75                     620                  RTS
+000014C8                           621  
+000014C8                           622  
+000014C8                           623  
+000014C8                           624  *----------OpCode-----------------                
+000014C8  43F9 0000157A            625  disMoveByte     LEA     MOVEByteDis, A1
+000014CE  103C 000E                626                  MOVE.B  #14, D0
+000014D2  4E4F                     627                  TRAP    #15
+000014D4  4E75                     628                  RTS                
+000014D6                           629  
+000014D6                           630  
+000014D6  43F9 00001582            631  disMoveWord     LEA     MOVEWordDis, A1
+000014DC  103C 000E                632                  MOVE.B  #14, D0
+000014E0  4E4F                     633                  TRAP    #15
+000014E2  4E75                     634                  RTS
+000014E4                           635  
+000014E4  43F9 0000158A            636  disMoveLong     LEA     MOVELongDis, A1
+000014EA  103C 000E                637                  MOVE.B  #14, D0
+000014EE  4E4F                     638                  TRAP    #15
+000014F0  4E75                     639                  RTS
+000014F2                           640                  
+000014F2                           641  disAsymmShift
+000014F2  43F9 00001592            642                  LEA     AsymmShift, A1
+000014F8  103C 000E                643                  MOVE.B  #14, D0
+000014FC  4E4F                     644                  TRAP    #15
+000014FE  4E75                     645                  RTS
+00001500                           646  disLogicShift
+00001500  43F9 00001595            647                  LEA     logicShift, A1
+00001506  103C 000E                648                  MOVE.B  #14, D0
+0000150A  4E4F                     649                  TRAP    #15
+0000150C  4E75                     650                  RTS
+0000150E                           651  
+0000150E                           652  disRotateShift                
+0000150E  43F9 00001598            653                  LEA     rotateShift, A1
+00001514  103C 000E                654                  MOVE.B  #14, D0
+00001518  4E4F                     655                  TRAP    #15
+0000151A  4E75                     656                  RTS                
+0000151C                           657                  
+0000151C                           658                  
+0000151C                           659                  
+0000151C                           660  
+0000151C                           661  *-----------Sizes------------------  
+0000151C  43F9 0000159B            662  disByteSize     LEA     byteSize, A1
+00001522  103C 000E                663                  Move.B  #14, D0
+00001526  4E4F                     664                  Trap    #15
+00001528  4E75                     665                  RTS
+0000152A                           666  
+0000152A  43F9 0000159F            667  disWordSize     LEA     wordSize, A1
+00001530  103C 000E                668                  Move.B  #14, D0
+00001534  4E4F                     669                  Trap    #15
+00001536  4E75                     670                  RTS
+00001538                           671  
+00001538  43F9 000015A3            672  disLongSize     LEA     longSize, A1
+0000153E  103C 000E                673                  Move.B  #14, D0
+00001542  4E4F                     674                  Trap    #15
+00001544  4E75                     675                  RTS
+00001546                           676  
+00001546                           677  
+00001546                           678  *-----------Directions------------------         
+00001546  43F9 000015A7            679  disLeftDir      LEA     leftDir, A1
+0000154C  103C 000E                680                  Move.B  #14, D0
+00001550  4E4F                     681                  Trap    #15
+00001552  6000 FCDA                682                  BRA     printDirRet
+00001556                           683  
+00001556  43F9 000015A9            684  disRightDir     LEA     rightDir, A1
+0000155C  103C 000E                685                  Move.B  #14, D0
+00001560  4E4F                     686                  Trap    #15
+00001562  6000 FCCA                687                  BRA     printDirRet
+00001566                           688  
+00001566                           689  
+00001566                           690  *-----------Error------------------         
+00001566  43F9 00001574            691  disError        LEA     Error, A1
+0000156C  103C 000E                692                  Move.B  #14, D0
+00001570  4E4F                     693                  Trap    #15
+00001572  4E75                     694                  RTS          
+00001574                           695           
+00001574                           696  *----------------------------------------------------------------
+00001574                           697  *                         String constants                      |
+00001574                           698  *----------------------------------------------------------------
+00001574                           699  
+00001574                           700  * Put variables and constants here
+00001574= 65 72 72 6F 72 00        701  Error DC.B  'error', 0
+0000157A                           702  
+0000157A= 4D 4F 56 45 2E 42 ...    703  MOVEByteDis     DC.B    'MOVE.B ', 0
+00001582= 4D 4F 56 45 2E 57 ...    704  MOVEWordDis     DC.B    'MOVE.W ', 0   
+0000158A= 4D 4F 56 45 2E 4C ...    705  MOVELongDis     DC.B    'MOVE.L ', 0
+00001592                           706  
+00001592= 41 53 00                 707  AsymmShift      DC.B    'AS', 0
+00001595                           708  
+00001595= 4C 53 00                 709  logicShift      DC.B    'LS', 0
+00001598                           710  
+00001598= 52 4F 00                 711  rotateShift     DC.B    'RO', 0
+0000159B                           712  
+0000159B                           713  
+0000159B                           714  
+0000159B= 2E 42 20 00              715  byteSize        DC.B    '.B ', 0
+0000159F= 2E 57 20 00              716  wordSize        DC.B    '.W ', 0
+000015A3= 2E 4C 20 00              717  longSize        DC.B    '.L ', 0
+000015A7                           718  
+000015A7= 4C 00                    719  leftDir         DC.B    'L', 0
+000015A9= 52 00                    720  rightDir        DC.B    'R', 0
+000015AB                           721  
+000015AB                           722  
+000015AB= 44 00                    723  DnReg           DC.B    'D', 0
+000015AD= 41 00                    724  AnReg           DC.B    'A', 0
+000015AF= 28 00                    725  LeftParen       DC.B    '(', 0
+000015B1= 29 00                    726  RightParen      DC.B    ')', 0
+000015B3= 2B 00                    727  disPlus         DC.B    '+', 0
+000015B5= 2D 00                    728  disMinus        DC.B    '-', 0
+000015B7= 2C 00                    729  disComma        DC.B    ',', 0
+000015B9= 20 00                    730  disSpace        DC.B    ' ', 0
+000015BB= 49 64 65 6E 74 69 ...    731  ASKSTART        DC.B    'Identify the starting memory location: ', 0
+000015E3= 49 64 65 6E 74 69 ...    732  ASKEND          DC.B    'Identify the ending memory location: ', 0
+00001609                           733  
+00001609                           734  *numbers
+00001609= 30 00                    735  disZero         DC.B    '0', 0
+0000160B= 31 00                    736  disOne          DC.B    '1', 0
+0000160D= 32 00                    737  disTwo          DC.B    '2', 0
+0000160F= 33 00                    738  disThree        DC.B    '3', 0
+00001611= 34 00                    739  disFour         DC.B    '4', 0
+00001613= 35 00                    740  disFive         DC.B    '5', 0
+00001615= 36 00                    741  disSix          DC.B    '6', 0
+00001617= 37 00                    742  disSeven        DC.B    '7', 0
+00001619= 38 00                    743  disEight        DC.B    '8', 0
+0000161B= 39 00                    744  disNine         DC.B    '9', 0
+0000161D                           745  
+0000161D= 41 00                    746  disA            DC.B    'A', 0
+0000161F= 42 00                    747  disB            DC.B    'B', 0
+00001621= 43 00                    748  disC            DC.B    'C', 0
+00001623= 44 00                    749  disD            DC.B    'D', 0
+00001625= 45 00                    750  disE            DC.B    'E', 0
+00001627= 46 00                    751  disF            DC.B    'F', 0
+00001629                           752  
+00001629= 00                       753  disNewLine      DC.B    '', 0
+0000162A                           754   
+0000162A                           755      END    START        ; last line of source
 
-10 errors detected
+No errors detected
 No warnings generated
 
 
 SYMBOL TABLE INFORMATION
 Symbol-name         Value
 -------------------------
-ANREG               13C0
-ASKEND              13F6
-ASKSTART            13CE
+ANREG               15AD
+ASKEND              15E3
+ASKSTART            15BB
+ASYMMSHIFT          1592
+ASYSHIFTGROUP       11FE
+ASYSHIFTRET         1210
+BITSHIFTGROUP       11A4
+BITSHIFTTYPE        11A8
+BITSHIFTTYPECOMPARE  11D4
+BYTESIZE            159B
 CODE0000            1084
 CODE0001            1088
 CODE0010            108C
@@ -587,63 +791,108 @@ CODE1100            10B2
 CODE1101            10B6
 CODE1110            10BA
 CODE1111            10BE
-DISANINDBACK        123A
-DISANINDMODE        1222
-DISANPOSBACK        125C
-DISANPOSMODE        1244
-DISANPREBACK        128A
-DISANPREMODE        126C
-DISANREG            12A4
-DISANREGBACK        121E
-DISANREGMODE        120C
-DISCOMMA            13CA
-DISDNREG            1296
-DISDNREGBACK        1208
-DISDNREGMODE        11F6
-DISERROR            1392
-DISFIVE             1426
-DISFOUR             1424
-DISLEFTPAREN        12B2
-DISMINUS            13C8
-DISMOVEBYTE         1384
-DISNEWLINE          142C
-DISONE              141E
-DISPLAYCOMMA        12EA
-DISPLAYLINE         1306
-DISPLAYMINUS        12DC
-DISPLAYPLUS         12CE
-DISPLAYSPACE        12F8
-DISPLUS             13C6
-DISRIGHTPAREN       12C0
-DISSEVEN            142A
-DISSIX              1428
-DISSPACE            13CC
-DISTHREE            1422
-DISTWO              1420
-DISZERO             141C
-DNREG               13BE
+DISA                161D
+DISANINDMODE        130E
+DISANPOSMODE        1328
+DISANPREMODE        1348
+DISANREG            1378
+DISANREGMODE        1300
+DISASYMMSHIFT       14F2
+DISB                161F
+DISBYTESIZE         151C
+DISC                1621
+DISCOMMA            15B7
+DISD                1623
+DISDNREG            136A
+DISDNREGMODE        12F2
+DISE                1625
+DISEIGHT            1619
+DISERROR            1566
+DISF                1627
+DISFIVE             1613
+DISFOUR             1611
+DISLEFTDIR          1546
+DISLEFTPAREN        1386
+DISLOGICSHIFT       1500
+DISLONGSIZE         1538
+DISMINUS            15B5
+DISMOVEBYTE         14C8
+DISMOVELONG         14E4
+DISMOVEWORD         14D6
+DISNEWLINE          1629
+DISNINE             161B
+DISONE              160B
+DISPLAYCOMMA        13BE
+DISPLAYLINE         13DA
+DISPLAYMINUS        13B0
+DISPLAYPLUS         13A2
+DISPLAYSPACE        13CC
+DISPLUS             15B3
+DISRIGHTDIR         1556
+DISRIGHTPAREN       1394
+DISROTATESHIFT      150E
+DISSEVEN            1617
+DISSIX              1615
+DISSPACE            15B9
+DISTHREE            160F
+DISTWO              160D
+DISWORDSIZE         152A
+DISZERO             1609
+DNREG               15AB
 ENDPT               55
-ERROR               13A0
-EXAMPLE             1217
+ERROR               1574
+EXAMPLE             E20F
 JMP_TABLE           1024
-LEFTPAREN           13C2
-MODECOMPARE         115A
-MODECOMPARE1        1166
-MODECOMPARE2        1172
-MODECOMPARE3        117E
-MODECOMPARE4        1186
-MODECOMPARE5        118E
+LEFTDIR             15A7
+LEFTPAREN           15AF
+LOGICSHIFT          1595
+LOGSHIFTGROUP       11EC
+LOGSHIFTRET         11FE
+LONGSIZE            15A3
+MODECOMPARE         124E
+MODECOMPARE1        125A
+MODECOMPARE2        1266
+MODECOMPARE3        1272
+MODECOMPARE4        127E
+MODECOMPARE5        128A
 MOVEBYTE            10C2
-MOVEBYTEDIS         13A6
-MOVEDESDECODE       111A
-MOVEDESMODEDECODE   111E
-MOVEDESXNDECODE     1144
-MOVELONGDIS         13B6
-MOVESRCDECODE       10F0
-MOVESRCMODEDECODE   10F4
-MOVESRCXNDECODE     110A
-MOVEWORDDIS         13AE
-RIGHTPAREN          13C4
+MOVEBYTEDIS         157A
+MOVEDESDECODE       116C
+MOVEDESMODEDECODE   1184
+MOVEDESXNDECODE     1170
+MOVELONG            1112
+MOVELONGDIS         158A
+MOVESRCDECODE       113A
+MOVESRCMODEDECODE   1152
+MOVESRCXNDECODE     113E
+MOVEWORD            10EA
+MOVEWORDDIS         1582
+PRINT0              13E8
+PRINT1              13F6
+PRINT2              1404
+PRINT3              1412
+PRINT4              1420
+PRINT5              142E
+PRINT6              143C
+PRINT7              144A
+PRINT8              1458
+PRINT9              1466
+PRINTA              1474
+PRINTB              1482
+PRINTC              1490
+PRINTD              149E
+PRINTDIRECTION      1222
+PRINTDIRRET         122E
+PRINTE              14AC
+PRINTF              14BA
+PRINTIMMDATA        121C
+PRINTSIZE           1230
+PRINTSIZERET        124C
+RIGHTDIR            15A9
+RIGHTPAREN          15B1
+ROTATESHIFT         1598
+ROTSHIFTGROUP       1210
+ROTSHIFTRET         121C
 SHIFT10             A
 SHIFT12             C
 SHIFT13             D
@@ -651,19 +900,12 @@ STACK               A000
 START               1000
 STARTPT             AA
 TEMP                400
-XNCOMPARE           1196
-XNCOMPARE1          11A2
-XNCOMPARE2          11AE
-XNCOMPARE3          11BA
-XNCOMPARE4          11C6
-XNCOMPARE5          11D2
-XNCOMPARE6          11DE
-XNCOMPARE7          11EA
-XNIS0               1314
-XNIS1               1322
-XNIS2               1330
-XNIS3               133E
-XNIS4               134C
-XNIS5               135A
-XNIS6               1368
-XNIS7               1376
+WORDSIZE            159F
+XNCOMPARE           1292
+XNCOMPARE1          129E
+XNCOMPARE2          12AA
+XNCOMPARE3          12B6
+XNCOMPARE4          12C2
+XNCOMPARE5          12CE
+XNCOMPARE6          12DA
+XNCOMPARE7          12E6
