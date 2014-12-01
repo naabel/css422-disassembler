@@ -27,6 +27,7 @@ START:
         TRAP    #15             *initiate read from keyboard
         
         JSR     setCharToHex
+        
         LEA     ASKEND, A1      *ask about ending memory location
         MOVE.B  #13, D0         
         TRAP    #15             *display A1
@@ -34,7 +35,9 @@ START:
         LEA     ENDPT, A1        
         MOVE.B  #4, D0          *
         TRAP    #15
-
+        
+        JSR     setCharToHex
+        
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
 
@@ -838,7 +841,7 @@ disError        LEA     Error, A1
 
 setCharToHex
         ADD.B   #%1, D6     *counter
-        CMP.B  D1, D6
+        CMP.W   D1, D6
         BGT     doneLoadASCII
         MOVE.B  (A1)+, D2 *move one character
         CMPI.B  #$40, D2     *if greater than thirty
@@ -853,9 +856,9 @@ charIsNum
         BRA         moveToLong
         
 isLetterChkType
-        CMPI.B   #$61, D2
-        BGE      charIsLow
-        BRA      charIsBig
+        CMPI.B      #$61, D2
+        BGE         charIsLow
+        BRA         charIsBig
 
 charIsLow
         SUBI.B      #55, D2
@@ -872,7 +875,7 @@ moveToLong
         ADD.B       D2, D4  *make hex value most significant bits (4-8)
         BRA         setCharToHex
         
-doneLoadASCII
+doneLoadASCII     
         RTS
 
          
