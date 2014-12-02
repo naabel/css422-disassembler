@@ -8,8 +8,6 @@
 *                | OpCode | Part | SubPart | Job
 *
 *-----------------------------------------------------------
-STARTPT   EQU $AA     *starting point
-ENDPT     EQU $55     *ending point
 temp      EQU $400    *location to work at
 stack     EQU $A000
 example   EQU %1110000000001111    * I made up bits 0 to 11      
@@ -20,43 +18,58 @@ shift13   EQU 13
 
         ORG    $1000
 START:                          
-*        LEA     ASKSTART, A1    *message to ask user for input
-*        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
-*        TRAP    #15             *Display A1 message
-*        
-*        MOVE.B  #4, D0          *input rule saves to D1
-*        TRAP    #15             *initiate read from keyboard
-*        
-*        MOVE.B  D1, STARTPT        *save number to NUM1
-*        
-*        LEA     ASKEND, A1      *ask about ending memory location
-*        MOVE.B  #13, D0         
-*        TRAP    #15             *display A1
-*        
-*        MOVE.B  #4, D0          *
-*        TRAP    #15
-*        
-*        MOVE.B  D1, ENDPT      *ending memory location stored
-
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
+        
+        LEA     ASKSTART, A1    *message to ask user for input
+        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
+        TRAP    #15             *Display A1 message
+        
+        LEA     STARTPT, A1
+        MOVE.B  #2, D0          *input rule saves to D1
+        TRAP    #15             *initiate read from keyboard
+        
+        JSR     setCharToHex    
+        
+        MOVE.L  D4, STARTPT
+        
+        CLR.L     D4
+        CLR       D6
+        
+        LEA     ASKEND, A1      *ask about ending memory location
+        MOVE.B  #13, D0         
+        TRAP    #15             *display A1
+        
+        LEA     ENDPT, A1       
+        MOVE.B  #2, D0          *
+        TRAP    #15
+        
+        JSR     setCharToHex
+        
+        MOVE.L  D4, ENDPT
+        
+        CLR     D4
+        CLR     D6
+        
+
 
         CLR.L   D0              *Zero it
         CLR.L   D1
  
 *Get word size element
-            MOVE.W      #example,D6     *Example variable put in place D6        
-            MOVE.W      D6, D0          *D0 loaded
-            MOVE.B      #shift12,D1     *Shift 12 loaded  
-            LSR.W       D1,D0           *D0 Shifted by 12
-            MULU        #6,D0           *Form offset     
+            MOVE.L      STARTPT, A6
+            CMPA.L      ENDPT, A6
+            BEQ         DONE
+            MOVE.W      (A6)+,D6     *variable put in place        
+            MOVE.W      D6, D0
+            MOVE.B      #shift12,D1       *Shift 12 bits to the right  
+            LSR.W       D1,D0           *Move the bits
+            MULU        #6,D0       *Form offset     
 
-            JSR         0(A0,D0)        *Jump indirect with index
+            JSR         0(A0,D0)    *Jump indirect with index
 * check read pointer location against EnDPt if end done
 * otherwise move back into read sub routine
                     
-
-
 
 *----------------------------------------------------------------
 *                       OpCode ID Table                         |
@@ -93,14 +106,14 @@ jmp_table
 
                JMP         code1101
 
-               JMP         code1110 *To BitShiftGroup
+               JMP         code1110
 
                JMP         code1111
 
 *subroutines from jump table
 
 
-code0000       STOP        #2700
+code0000       BRA        GroupZero
 
 code0001       BRA         MoveByte
 
@@ -137,6 +150,93 @@ code1111       STOP        #$2700
 *----------------------------------------------------------------
 *                OpCode Breakdown Methods                       |
 *----------------------------------------------------------------
+
+GroupZero       BRA        GroupZeroType
+
+GroupZeroType   
+                CLR         D0
+                CLR         D1  *temp variables
+                CLR         D2  *Mode    
+                CLR         D3  *Number
+                CLR         D4  *Memory increment save
+                CLR         D5  *size
+                CLR         D7  *
+*----------- store size-------------------------------
+                MOVE.W      D6, D5
+                LSL.W       #8, D5
+                MOVE.B      #14,D1
+                LSR.W       D1, D5
+*-----------Mode--------------------------------------
+                MOVE.W      D6, D2
+                MOVE.B      #10, D1
+                LSL.W       D1, D2
+                MOVE.B      #13, D1
+                LSR.W       D1, D2
+
+*-----------Register Number-------------------
+                MOVE.W      D6, D3
+                MOVE.B      #13, D1
+                LSL.W       D1,D3
+                LSR.W       D1,D3
+
+
+*-------------Identifier set------------------                
+                MOVE.W      D6, D0
+                LSL.W       #8, D0  *isolate most significant eight bits for ID
+                BRA         GroupZeroCompare
+
+GroupZeroCompare
+                CMPI.W      #%00000000, D0
+                BEQ         ORIopCode
+                CMPI.W      #%00001000, D0
+                BEQ         BTSTopCode         
+                CMPI.W      #%00001100, D0
+                BEQ         CMPIopCode
+                CMPI.W      #%00001010, D0
+                BEQ         EORIopCode
+
+
+ORIopCode
+*                JSR         disORIopCode
+                JSR         printSize
+                JSR         printHash
+                JSR         printImmediateData
+       
+
+BTSTopCode
+
+CMPIopCode
+
+EORIopCode
+
+
+printImmediateData
+                JSR         findImmediateData
+                JSR         disImmediateData
+                RTS
+
+findImmediateData
+                CMPI.B      #0, D5
+                BEQ         incrPtByte
+                CMPI.B      #1, D5
+                BEQ         incrPtWord
+                CMPI.B      #2, D5
+                BEQ         incrPtLong
+
+incrPtByte
+                MOVE.B      (A6)+, D4
+                RTS
+                
+incrPtWord
+                MOVE.W      (A6)+, D4
+                RTS
+                
+incrPtLong          
+                MOVE.L      (A6)+, D4
+                RTS      
+                
+DisImmediateData
+                                
 
 *--------------MOVE.B Decode-----------------------------
 
@@ -300,70 +400,69 @@ LogShiftGroup
                 JSR         ShiftGrpCount
                 JSR         displayComma
                 JSR         displaySpace
-*               JSR         ShiftGrpDest
-                
-
-LogShiftRet            
-                
-
+                JSR         printShiftRegister
 
 AsyShiftGroup
-                JSR         disAsymmShift
-                
-                CMPI.B      #0, D4
-                BEQ         disRightDir
-                BNE         disLeftDir
-AsyShiftRet   
+                JSR         disAsymmShift    
+                JSR         printDirection
+                JSR         printSize
+                JSR         ShiftGrpCount
+                JSR         displayComma
+                JSR         displaySpace
+                JSR         printShiftRegister
+
 
 RotShiftGroup
-                JSR         disRotateShift
-                
+                JSR         disRotateShift    
                 JSR         printDirection
+                JSR         printSize
+                JSR         ShiftGrpCount
+                JSR         displayComma
+                JSR         displaySpace
+                JSR         printShiftRegister
 
-RotShiftRet
 
 
-
+*--------BIT SHifting helper functions---------
 ShiftGrpCount
                 CMPI.B      #0, D7
                 BEQ         printImmData
-                BNE         printRegister    
+                BNE         printShiftRegister    
 
 
 printImmData    
-                JSR         printHashTag
-                JSR         printShiftRegNumber
+                JSR         printHash
+                JSR         printShiftXnNumber
                 RTS
                                 
-printRegister
+printShiftRegister
                 JSR         disDnReg
-                JSR         printShiftRegNumber
+                JSR         printShiftXn
                 RTS
+
                 
-printShiftRegNumber
-                JSR         disDnReg
-                
-                CMPI.B      #0, D1
-                BEQ         print8
+printShiftXnNumber
                 MOVE.W      D6, D1
                 LSL.W       #4, D1
                 MOVE.B      #13, D2
-                LSR.W       D2, D1
+                LSR.W       D2, D1                
+                CMPI.B      #0, D1
+                BEQ         print8
                 MOVE.B      #3, D0
                 TRAP #15
                 
                 RTS
                 
+printShiftXn                
+                MOVE.W      D6, D3
+                MOVE.B      #13, D2
+                LSL.W       D2, D3
+                LSR.W       D2, D3                
+                JSR         XnCompare
                 
+                RTS
 
-*Nick:
-*Create sub-routine to print shift
-printShift
-     
-                                
-                
-                
-
+*-------------Helper Functions-----------     
 printDirection
                 CMPI.B      #0, D4
                 BEQ         disRightDir
@@ -380,7 +479,7 @@ printSize
                 CMPI.B      #2, D5
                 BEQ         disLongSize
                 BNE         disError
-printSizeRet
+                
                 RTS
 
 
@@ -457,9 +556,19 @@ XnCompare7      CMPI.b  #%111, D3
 *                          DISPLAYS                             |
 *----------------------------------------------------------------
 
-
+*---------------------HEX Decoder------------------------
+HexByteDecode
+                
+                MOVE.B      D4, D0                
+                LSR.B       #4, D0
+*                JSR         hexNumCompare
+                SUB.B      D0, D4
+                LSR.L       #4, D4
           
+HexWordDecode
 
+
+HexLongDecode
 
 *---------------------MODE Displays----------------------
 
@@ -663,7 +772,7 @@ printF          LEA     disF, A1
                 TRAP    #15
                 RTS
 
-printHashTag    LEA     hashTag,A1
+printHash       LEA     hashTag,A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
@@ -739,6 +848,55 @@ disError        LEA     Error, A1
                 Move.B  #14, D0
                 Trap    #15
                 RTS          
+
+
+*----------------------------------------------------------------
+*                         ASCII to HEX Decode                   |
+*----------------------------------------------------------------
+
+setCharToHex
+        ADD.B   #%1, D6     *counter
+        CMP.W   D1, D6
+        BGT     doneLoadASCII
+        MOVE.B  (A1)+, D2 *move one character
+        CMPI.B  #$40, D2     *if greater than thirty
+        BLT     charIsNum       *number
+        CMPI.B  #$41, D2
+        BGT     isLetterChkType
+backToloop
+        BRA     setCharToHex
+
+charIsNum
+        SUBI.B      #$30, D2
+        BRA         moveToLong
+        
+isLetterChkType
+        CMPI.B      #$61, D2
+        BGE         charIsLow
+        BRA         charIsBig
+
+charIsLow
+        SUBI.B      #55, D2
+        BRA         moveToLong
+        
+charIsBig        
+        SUBI.B      #87, D2
+        BRA         moveToLong
+        
+moveToLong
+        LSL.B       #4, D2
+        LSR.B       #4, D2
+        LSL.L       #4, D4  *making space for new byte into remake
+        ADD.B       D2, D4  *make hex value most significant bits (4-8)
+        BRA         setCharToHex
+        
+doneLoadASCII     
+        RTS
+        
+        
+DONE
+        BRA         START    
+
          
 *----------------------------------------------------------------
 *                         String constants                      |
@@ -799,11 +957,11 @@ disE            DC.B    'E', 0
 disF            DC.B    'F', 0
 
 disNewLine      DC.B    '', 0
+
+STARTPT         DS.L    1
+ENDPT           DS.L    1
  
     END    START        ; last line of source
-
-
-
 
 
 
