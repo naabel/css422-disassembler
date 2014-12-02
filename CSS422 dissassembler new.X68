@@ -36,7 +36,7 @@ START:
 *        MOVE.B  #4, D0          *
 *        TRAP    #15
 *        
-*        MOVE.B  D1, ENDPT         *ending memory location stored
+*        MOVE.B  D1, ENDPT      *ending memory location stored
 
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
@@ -45,16 +45,18 @@ START:
         CLR.L   D1
  
 *Get word size element
-            MOVE.W      #example,D6     *variable put in place        
-            MOVE.W      D6, D0
-            MOVE.B      #shift12,D1       *Shift 12 bits to the right  
-            LSR.W       D1,D0           *Move the bits
-            MULU        #6,D0       *Form offset     
+            MOVE.W      #example,D6     *Example variable put in place D6        
+            MOVE.W      D6, D0          *D0 loaded
+            MOVE.B      #shift12,D1     *Shift 12 loaded  
+            LSR.W       D1,D0           *D0 Shifted by 12
+            MULU        #6,D0           *Form offset     
 
-            JSR         0(A0,D0)    *Jump indirect with index
+            JSR         0(A0,D0)        *Jump indirect with index
 * check read pointer location against EnDPt if end done
 * otherwise move back into read sub routine
                     
+
+
 
 *----------------------------------------------------------------
 *                       OpCode ID Table                         |
@@ -91,7 +93,7 @@ jmp_table
 
                JMP         code1101
 
-               JMP         code1110
+               JMP         code1110 *To BitShiftGroup
 
                JMP         code1111
 
@@ -354,7 +356,9 @@ printShiftRegNumber
                 
                 
 
-
+*Nick:
+*Create sub-routine to print shift
+printShift
      
                                 
                 
@@ -659,7 +663,7 @@ printF          LEA     disF, A1
                 TRAP    #15
                 RTS
 
-print#          LEA     hashTag,A1
+printHashTag    LEA     hashTag,A1
                 MOVE.B  #14, D0
                 TRAP    #15
                 RTS
@@ -797,6 +801,10 @@ disF            DC.B    'F', 0
 disNewLine      DC.B    '', 0
  
     END    START        ; last line of source
+
+
+
+
 
 
 
