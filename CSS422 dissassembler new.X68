@@ -18,34 +18,49 @@ shift13   EQU 13
 
         ORG    $1000
 START:                          
+        LEA     stack,SP        *Load the SP
+        LEA     jmp_table,A0    *Index into the table
+        
         LEA     ASKSTART, A1    *message to ask user for input
         MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
         TRAP    #15             *Display A1 message
-
-        LEA     STARTPT, A1     *save number to NUM1        
-        MOVE.B  #4, D0          *input rule saves to D1
+        
+        LEA     STARTPT, A1
+        MOVE.B  #2, D0          *input rule saves to D1
         TRAP    #15             *initiate read from keyboard
         
-        JSR     setCharToHex
+        JSR     setCharToHex    
+        
+        MOVE.L  D4, STARTPT
+        
+        CLR.L     D4
+        CLR       D6
         
         LEA     ASKEND, A1      *ask about ending memory location
         MOVE.B  #13, D0         
         TRAP    #15             *display A1
         
-        LEA     ENDPT, A1        
-        MOVE.B  #4, D0          *
+        LEA     ENDPT, A1       
+        MOVE.B  #2, D0          *
         TRAP    #15
         
         JSR     setCharToHex
         
-        LEA     stack,SP        *Load the SP
-        LEA     jmp_table,A0    *Index into the table
+        MOVE.L  D4, ENDPT
+        
+        CLR     D4
+        CLR     D6
+        
+
 
         CLR.L   D0              *Zero it
         CLR.L   D1
  
 *Get word size element
-            MOVE.W      #example,D6     *variable put in place        
+            MOVE.L      STARTPT, A6
+            CMPA.L      ENDPT, A6
+            BEQ         DONE
+            MOVE.W      (A6)+,D6     *variable put in place        
             MOVE.W      D6, D0
             MOVE.B      #shift12,D1       *Shift 12 bits to the right  
             LSR.W       D1,D0           *Move the bits
@@ -877,6 +892,10 @@ moveToLong
         
 doneLoadASCII     
         RTS
+        
+        
+DONE
+        BRA         START    
 
          
 *----------------------------------------------------------------
