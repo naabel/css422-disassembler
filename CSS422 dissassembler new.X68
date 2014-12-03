@@ -204,6 +204,7 @@ ORIopCode
        
 
 BTSTopCode
+                
 
 CMPIopCode
 
@@ -504,15 +505,15 @@ ModeCompare2    CMPI.B  #%010, D2
                 BNE     ModeCompare3
                 
 ModeCompare3    CMPI.B  #%011, D2
-                BEQ    disAnPosMode
+                BEQ     disAnPosMode
                 BNE     ModeCompare4
 
 ModeCompare4    CMPI.B  #%100, D2
-                BEQ    disAnPreMode
+                BEQ     disAnPreMode
                 BNE     ModeCompare5
                 
 ModeCompare5    CMPI.B  #%111, D2
-*                BEQ    disEAmode
+                BEQ     EACompare
                 BNE     disError
 
              
@@ -550,6 +551,56 @@ XnCompare7      CMPI.b  #%111, D3
                 BEQ     Print7
                 BNE     disError
                 * FIXME we may need to use this for a bad command BNE XnCompare1
+
+**--<EA> Mode Register
+*
+EACompare       CMPI.B  #%000,  D3
+                BEQ     GetWAddress
+                BNE     EACompare1
+                
+EACompare1      CMPI.B  #%001,  D3
+                BEQ     GetLAddress
+                BNE     EACompare4
+                
+EACompare4      CMPI.B  #%100,  D3
+                BEQ     MoveImmDataScan
+                BNE     disError
+                
+**--<EA> After Mode
+
+GetWAddress     MOVE.W  (A6)+,  D4
+                JSR     HexWordDecode
+                *JSR     PrintWordEA
+                RTS
+                
+GetLAddress     MOVE.L  (A6)+,  D4
+                JSR     HexLongDecode
+                *JSR     PrintLongEA
+                RTS
+
+
+MoveImmDataScan CMPI.B  #%01,   D5
+                BEQ     GetBData
+                CMPI.B  #%11,   D5
+                BEQ     GetWData
+                CMPI.B  #%10,   D5
+                BEQ     GetLData
+                BRA     disError
+
+ImmDataScan
+
+GetBData        MOVE.B  (A6)+,  D4
+                *Print
+                RTS
+
+GetWData        MOVE.W  (A6)+,  D4
+                *Print
+                RTS
+
+GetLData        MOVE.L  (A6)+,  D4
+                *Print
+                RTS
+
 
 
 *----------------------------------------------------------------
@@ -962,6 +1013,8 @@ STARTPT         DS.L    1
 ENDPT           DS.L    1
  
     END    START        ; last line of source
+
+
 
 
 

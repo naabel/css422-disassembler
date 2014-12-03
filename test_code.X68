@@ -9,7 +9,9 @@
     
 START:                  ; first instruction of program
 
-    MOVE.B  #$AA,       D2
+    LEA     $1000,      A1
+
+    MOVE.W  #$AA,       (A1)
     MOVE.W  #$BBBB,     D3
     MOVE.L  #$CCCCCCCC, D4
 
@@ -20,6 +22,7 @@ START:                  ; first instruction of program
 * Put variables and constants here
 
     END    START        ; last line of source
+
 
 *~Font name~Courier New~
 *~Font size~10~
