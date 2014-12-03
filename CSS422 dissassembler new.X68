@@ -10,7 +10,7 @@
 *-----------------------------------------------------------
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %1110000000001111    * I made up bits 0 to 11      
+example   EQU %0001000000001111    * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -20,33 +20,33 @@ shift13   EQU 13
 START:                          
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
-        
-        LEA     ASKSTART, A1    *message to ask user for input
-        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
-        TRAP    #15             *Display A1 message
-        
-        LEA     STARTPT, A1
-        MOVE.B  #2, D0          *input rule saves to D1
-        TRAP    #15             *initiate read from keyboard
-        
-        JSR     setCharToHex    
-        
-        MOVE.L  D4, STARTPT
-        
-        CLR.L     D4
-        CLR       D6
-        
-        LEA     ASKEND, A1      *ask about ending memory location
-        MOVE.B  #13, D0         
-        TRAP    #15             *display A1
-        
-        LEA     ENDPT, A1       
-        MOVE.B  #2, D0          *
-        TRAP    #15
-        
-        JSR     setCharToHex
-        
-        MOVE.L  D4, ENDPT
+*        
+*        LEA     ASKSTART, A1    *message to ask user for input
+*        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
+*        TRAP    #15             *Display A1 message
+*        
+*        LEA     STARTPT, A1
+*        MOVE.B  #2, D0          *input rule saves to D1
+*        TRAP    #15             *initiate read from keyboard
+*        
+*        JSR     setCharToHex    
+*        
+*        MOVE.L  D4, STARTPT
+*        
+*        CLR.L     D4
+*        CLR       D6
+*        
+*        LEA     ASKEND, A1      *ask about ending memory location
+*        MOVE.B  #13, D0         
+*        TRAP    #15             *display A1
+*        
+*        LEA     ENDPT, A1       
+*        MOVE.B  #2, D0          *
+*        TRAP    #15
+*        
+*        JSR     setCharToHex
+*        
+*        MOVE.L  D4, ENDPT
         
         CLR     D4
         CLR     D6
@@ -55,18 +55,29 @@ START:
 
         CLR.L   D0              *Zero it
         CLR.L   D1
- 
+*        MOVE.W  #0, lineNumber
+*        MOVE.L      STARTPT, A5
 *Get word size element
-            MOVE.L      STARTPT, A6
-            CMPA.L      ENDPT, A6
-            BEQ         DONE
-            MOVE.W      (A6)+,D6     *variable put in place        
+*MainLoop            
+*            CMPA.L      ENDPT, A5
+*            BEQ         DONE         
+*            ADDI.W      #1, lineNumber
+*            LEA         output, (A6)+
+*             MOVE.W      lineNumber, output   
+*            MOVE.L      A5, D2
+*            MOVE.B      #8, hexlength
+*            JSR         hexdecode
+*            MOVE.W      (A5)+,D6     *variable put in place
+            MOVE.W      #example, D6        
             MOVE.W      D6, D0
             MOVE.B      #shift12,D1       *Shift 12 bits to the right  
             LSR.W       D1,D0           *Move the bits
             MULU        #6,D0       *Form offset     
 
             JSR         0(A0,D0)    *Jump indirect with index
+ContinueMain
+*            JSR         disOutput
+*            JSR         display
 * check read pointer location against EnDPt if end done
 * otherwise move back into read sub routine
                     
@@ -79,6 +90,7 @@ START:
 jmp_table  
 
                JMP         code0000
+               RTS
 
                JMP         code0001
 
@@ -113,37 +125,53 @@ jmp_table
 *subroutines from jump table
 
 
-code0000       BRA        GroupZero
+code0000       JSR        GroupZero
+               BRA        continueMain
 
-code0001       BRA         MoveByte
-
-code0010       BRA         MoveLong
+code0001       JSR         MoveByte
+               BRA        continueMain
+code0010       JSR         MoveLong               
+                BRA        continueMain
 
 code0011       BRA         MoveWord
+               BRA        continueMain
 
 code0100       STOP        #$2700
+               BRA        continueMain
 
 code0101       STOP        #$2700
+               BRA        continueMain
 
 code0110       STOP        #$2700
+               BRA        continueMain
 
 code0111       STOP        #$2700
+               BRA        continueMain
 
 code1000       STOP        #$2700
+               BRA        continueMain
 
 code1001       STOP        #$2700
+               BRA        continueMain
 
 code1010       STOP        #$2700
+               BRA        continueMain
  
 code1011       BRA         code1011
+               BRA        continueMain
 
 code1100       STOP        #$2700
+               BRA        continueMain
+
 
 code1101       STOP        #$2700
+               BRA        continueMain
 
 code1110       BRA         BitShiftGroup
+               BRA        continueMain
 
 code1111       STOP        #$2700
+               BRA        continueMain
 
  
 
@@ -448,7 +476,7 @@ printShiftXnNumber
                 MOVE.B      #13, D2
                 LSR.W       D2, D1                
                 CMPI.B      #0, D1
-                BEQ         print8
+                BEQ         
                 MOVE.B      #3, D0
                 TRAP #15
                 
@@ -459,26 +487,24 @@ printShiftXn
                 MOVE.B      #13, D2
                 LSL.W       D2, D3
                 LSR.W       D2, D3                
-                JSR         XnCompare
+                JSR         HexCompare
                 
                 RTS
 
 *-------------Helper Functions-----------     
 printDirection
                 CMPI.B      #0, D4
-                BEQ         disRightDir
-                BNE         disLeftDir
-printDirRet
-                RTS
+                BEQ         outDirectionR
+                BNE         outDirectionL
 
 
 printSize
                 CMPI.B      #0, D5
-                BEQ         disByteSize
+                BEQ         outSizeByte
                 CMPI.B      #1, D5
-                BEQ         disWordSize
+                BEQ         outSizeWord
                 CMPI.B      #2, D5
-                BEQ         disLongSize
+                BEQ         outSizeLong
                 BNE         disError
                 
                 RTS
@@ -493,11 +519,11 @@ printSize
 *------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     CMPI.B  #%000, D2 * last three are zeroes
-                BEQ     disDnRegMode       *jump to subroutine for Data register Source
+                BEQ     disDataReg       *jump to subroutine for Data register Source
                 BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
                 
 ModeCompare1    CMPI.B  #%001, D2
-                BEQ     disAnRegMode
+                BEQ     disAddressReg
                 BNE     ModeCompare2
                 
 ModeCompare2    CMPI.B  #%010, D2
@@ -569,13 +595,13 @@ EACompare4      CMPI.B  #%100,  D3
 **--<EA> After Mode
 
 GetWAddress     MOVE.W  (A6)+,  D4
-                JSR     HexWordDecode
-                *JSR     PrintWordEA
+                MOVE.B  #4,     hexLength
+                JSR     HexDecode
                 RTS
                 
 GetLAddress     MOVE.L  (A6)+,  D4
+                MOVE.B  #4,     hexLength
                 JSR     HexLongDecode
-                *JSR     PrintLongEA
                 RTS
 
 
@@ -601,7 +627,8 @@ GetLData        MOVE.L  (A6)+,  D4
                 *Print
                 RTS
 
-
+RTSCommand
+                RTS
 
 *----------------------------------------------------------------
 *                          DISPLAYS                             |
@@ -609,10 +636,11 @@ GetLData        MOVE.L  (A6)+,  D4
 
 *---------------------HEX Decoder------------------------
 HexByteDecode
-                
+                CMPI.B      #2, counter
+                BEQ         RTSCommand
                 MOVE.B      D4, D0                
                 LSR.B       #4, D0
-*                JSR         hexNumCompare
+                JSR         hexNumCompare
                 SUB.B      D0, D4
                 LSR.L       #4, D4
           
@@ -621,14 +649,18 @@ HexWordDecode
 
 HexLongDecode
 
-*---------------------MODE Displays----------------------
+HexNumCompare
+
+
+
+*---------------------MODE Displays Methods----------------------
 
 
 *-------------------
 
-disDnRegMode    JSR     disDnReg
+disDnRegMode    JSR     disDataReg
 
-                JSR     XnCompare
+                JSR     hexCompare
                 
                 CLR.L   D7
                 RTS
@@ -637,7 +669,7 @@ disDnRegMode    JSR     disDnReg
                     
 disAnRegMode    JSR     disAnReg
 
-                JSR     XnCompare
+                JSR     HexCompare
                 
                 CLR.L   D7
                 RTS
@@ -647,7 +679,7 @@ disAnRegMode    JSR     disAnReg
 disAnIndMode    JSR     disLeftParen
                 JSR     disAnReg
                 
-                JSR     XnCompare
+                JSR     HexCompare
                 
                 CLR.L   D7
                 
@@ -685,222 +717,283 @@ disAnPreMode    JSR     displayMinus
                 RTS
                 
 *-------------------
-
+disEALong
+disEAWord
+disImmData
 
       
                       
-*----------------------Register Displays---------------------- 
+*----------------------Displays---------------------- 
 
 
 *------------------Characters--------------------------------
 
-disDnReg        LEA     DnReg, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disDataReg      
+                MOVE.B  #$44, (A6)+
                 RTS
 
 
-disAnReg        LEA     AnReg, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disAddressReg        
+                MOVE.B  #$41, (A6)+
                 RTS
 
-disLeftParen    LEA     LeftParen, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disLeftParen    MOVE.B  #$28, (A6)+
                 RTS
                 
-disRightParen   LEA     RightParen, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disRightParen   MOVE.B  #$20, (A6)+
                 RTS
                 
               
-displayPlus     LEA     disPlus, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+displayPlus     MOVE.B  #$2B, (A6)+
                 RTS
                 
-displayMinus    LEA     disMinus, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+displayMinus    MOVE.B  #$2D, (A6)+
                 RTS
 
-displayComma    LEA     disComma, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+displayComma    MOVE.B  #$2C, (A6)+
                 RTS
                 
-displaySpace    LEA     disSpace, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+displaySpace    MOVE.B  #$20, (A6)+
                 RTS
                 
-displayLine     LEA     disNewLine, A1
-                MOVE.B  #0, D0
-                TRAP    #15
+displayLine     MOVE.B  #$A, (A6)+
                 RTS
                 
                 
 *-----------Numbers------------               
-print0          LEA     disZero, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-                
-print1          LEA     disOne, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
 
-print2          LEA     disTwo, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print3          LEA     disThree, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print4          LEA     disFour, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print5          LEA     disFive, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print6          LEA     disSix, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print7          LEA     disSeven, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-print8          LEA     disEight, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-                
-print9          LEA     disNine, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printA          LEA     disA, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printB          LEA     disB, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printC          LEA     disC, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printD          LEA     disD, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printE          LEA     disE, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printF          LEA     disF, A1
-                MOVE.B  #14, D0
-                TRAP    #15
-                RTS
-
-printHash       LEA     hashTag,A1
-                MOVE.B  #14, D0
-                TRAP    #15
+printHash       MOVE.B  #$23, (A6)+
                 RTS
 
 *----------OpCode-----------------                
-disMoveByte     LEA     MOVEByteDis, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disMoveByte     JSR   outMove
+                JSR   outSizeByte
                 RTS                
 
 
-disMoveWord     LEA     MOVEWordDis, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disMoveWord     JSR   outMove
+                JSR   outSizeWord
                 RTS
 
-disMoveLong     LEA     MOVELongDis, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disMoveLong     JSR   outMove
+                JSR   outSizeLong
                 RTS
                 
-disAsymmShift
-                LEA     AsymmShift, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+disAsymmShift   
+                JSR   outAsymm
                 RTS
 disLogicShift
-                LEA     logicShift, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+                JSR   outLogical
                 RTS
 
 disRotateShift                
-                LEA     rotateShift, A1
-                MOVE.B  #14, D0
-                TRAP    #15
+                JSR   outRotate
                 RTS                
                 
                 
                 
 
-*-----------Sizes------------------  
-disByteSize     LEA     byteSize, A1
-                Move.B  #14, D0
-                Trap    #15
+
+
+
+
+         
+
+*----------OPCode IDs--------------
+
+outMove
+                MOVE.B      #$4D, (A6)+
+                MOVE.B      #$4F, (A6)+
+                MOVE.B      #$56, (A6)+
+                MOVE.B      #$45, (A6)+
                 RTS
 
-disWordSize     LEA     wordSize, A1
-                Move.B  #14, D0
-                Trap    #15
+outMoveA
+                JSR         outMove
+                MOVE.B      #$41, (A6)+
+                RTS
+                
+outMoveM    
+                JSR         outMove
+                MOVE.B      #$4D, (A6)+
                 RTS
 
-disLongSize     LEA     longSize, A1
-                Move.B  #14, D0
-                Trap    #15
+outSub 
+                MOVE.B      #$53, (A6)+
+                MOVE.B      #$55, (A6)+
+                MOVE.B      #$42, (A6)+
+                RTS
+
+outSubA         JSR         outSub
+                MOVE.B      #$41, (A6)+
+                RTS
+
+outSubI         JSR         outSub
+                MOVE.B      #$49, (A6)+
                 RTS
 
 
-*-----------Directions------------------         
-disLeftDir      LEA     leftDir, A1
-                Move.B  #14, D0
-                Trap    #15
-                BRA     printDirRet
+outMulS         
+                MOVE.B      #$4D, (A6)+
+                MOVE.B      #$55, (A6)+
+                MOVE.B      #$4C, (A6)+
+                MOVE.B      #$53, (A6)+
+                RTS
 
-disRightDir     LEA     rightDir, A1
-                Move.B  #14, D0
-                Trap    #15
-                BRA     printDirRet
+outDivs                             
+                MOVE.B      #$44, (A6)+
+                MOVE.B      #$49, (A6)+
+                MOVE.B      #$56, (A6)+
+                MOVE.B      #$53, (A6)+
+                RTS
+
+outLEA          
+                MOVE.B      #$4C, (A6)+
+                MOVE.B      #$45, (A6)+
+                MOVE.B      #$41, (A6)+
+                RTS
+                
+outAnd
+                MOVE.B      #$41, (A6)+
+                MOVE.B      #$4E, (A6)+
+                MOVE.B      #$44, (A6)+
+                RTS
+
+outOri
+                MOVE.B      #$4F, (A6)+
+                MOVE.B      #$52, (A6)+
+                MOVE.B      #$49, (A6)+
+                RTS
+                
+outNeg
+                MOVE.B      #$4E, (A6)+
+                MOVE.B      #$45, (A6)+
+                MOVE.B      #$47, (A6)+
+                RTS
+
+outEOR
+                MOVE.B      #$45, (A6)+
+                MOVE.B      #$4F, (A6)+
+                MOVE.B      #$52, (A6)+
+                RTS
+                
+outEORI
+                JSR         outEOR
+                MOVE.B      #$49, (A6)+
+                RTS
+                
+outNot
+                MOVE.B      #$4E, (A6)+
+                MOVE.B      #$4F, (A6)+
+                MOVE.B      #$54, (A6)+
+                RTS                
+                
+outAsymm
+                MOVE.B      #$41, (A6)+
+                MOVE.B      #$53, (A6)+
+                RTS        
+                
+outRotate
+                MOVE.B      #$52, (A6)+
+                MOVE.B      #$4F, (A6)+
+                RTS
+
+outLogical     
+                MOVE.B      #$4C, (A6)+
+                MOVE.B      #$53, (A6)+
+                RTS
+                
+outBTST
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$54, (A6)+
+                MOVE.B      #$53, (A6)+
+                MOVE.B      #$54, (A6)+
+                RTS
+                
+outCMP
+                MOVE.B      #$43, (A6)+
+                MOVE.B      #$4D, (A6)+
+                MOVE.B      #$50, (A6)+
+                RTS
+
+outCMPI
+                JSR         outCMP
+                MOVE.B      #$49 ,(A6)+
+                RTS
+
+outCMPA
+                JSR         outCMP
+                MOVE.B      #$41, (A6)+
+                RTS
+                
+outBEQ
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$45, (A6)+
+                MOVE.B      #$51, (A6)+
+                RTS
+                
+outBNE
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$4E, (A6)+
+                MOVE.B      #$45, (A6)+
+                RTS
+                
+outBLT
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$4C, (A6)+
+                MOVE.B      #$54, (A6)+
+                RTS
+                
+outBHI
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$48, (A6)+
+                MOVE.B      #$49, (A6)+
+                RTS
+                
+outBRA
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$52, (A6)+
+                MOVE.B      #$41, (A6)+
+                RTS
+                
+outJSR
+                MOVE.B      #$42, (A6)+
+                MOVE.B      #$53, (A6)+
+                MOVE.B      #$52, (A6)+
+                RTS
+                
+outRTS
+                MOVE.B      #$52, (A6)+
+                MOVE.B      #$54, (A6)+
+                MOVE.B      #$53, (A6)+
+                RTS
+                                
 
 
-*-----------Error------------------         
-disError        LEA     Error, A1
-                Move.B  #14, D0
-                Trap    #15
-                RTS          
+*----------------opCode Helpers----------
+outDirectionL
+                MOVE.B      #$4C, (A6)+
+                RTS
 
-
+outDirectionR
+                MOVE.B      #$52, (A6)+
+                RTS
+                
+outSizeByte
+                MOVE.B  #$2E, (A6)+
+                MOVE.B  #$42, (A6)+
+                MOVE.B  #$20, (A6)+
+                RTS
+outSizeWord
+                MOVE.B  #$2E, (A6)+
+                MOVE.B  #$57, (A6)+
+                MOVE.B  #$20, (A6)+  
+                RTS
+outSizeLong
+                MOVE.B  #$2E, (A6)+
+                MOVE.B  #$4C, (A6)+
+                MOVE.B  #$20, (A6)+
+                RTS        
 *----------------------------------------------------------------
 *                         ASCII to HEX Decode                   |
 *----------------------------------------------------------------
@@ -944,9 +1037,53 @@ moveToLong
 doneLoadASCII     
         RTS
         
+*----------------------------------------------------------------
+*                         HEX to ASCII Decode                   |
+*---------------------------------------------------------------- 
+
+HexDecode
+        ADDI.B   #1, counter 
+        ROL.W   #4, D2  
+        MOVE.B  D2, D3
+        LSL.B   #4, D3
+        LSR.B   #4, D3
+        JSR     HexCompare
+        MOVE.B   HexLength, D0
+        CMP.B  counter, D0
+        BNE     HexDecode
+        MOVE.B  #$0, (A3)+
+        RTS
         
+          
+hexcompare
+        CMPI.B  #%1010, D3
+        BGE     loadHexLetter
+        BLT     loadHexNumber
+
+             
+loadHexNumber        
+        ADDI.B  #$30, D3
+        MOVE.B  D3, (A6)+
+        RTS
+loadHexLetter
+        ADDI.B  #$37, D3
+        MOVE.B  D3, (A6)+
+        RTS
+
+
+*-----------Error------------------         
+disError        
+                LEA     Error, A1
+                Move.B  #14, D0
+                Trap    #15
+                RTS 
+
+
+    
 DONE
-        BRA         START    
+*        BRA         START
+
+    
 
          
 *----------------------------------------------------------------
@@ -1009,10 +1146,21 @@ disF            DC.B    'F', 0
 
 disNewLine      DC.B    '', 0
 
+lineNumber      DS.W    1
+
+counter         DS.W    1
+hexlength       DS.B    1
+OpCodeSize      DS.B    1
+
+
 STARTPT         DS.L    1
 ENDPT           DS.L    1
+
+Output          DS.L    10
  
-    END    START        ; last line of source
+    END START          
+       ; last line of source
+
 
 
 
