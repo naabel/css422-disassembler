@@ -57,12 +57,12 @@ START:
         CLR.L   D1
 *        MOVE.W  #0, lineNumber
 *        MOVE.L      STARTPT, A5
-*Get word size element
+*Get word  element
 *MainLoop            
 *            CMPA.L      ENDPT, A5
 *            BEQ         DONE         
 *            ADDI.W      #1, lineNumber
-*            LEA         output, (A6)+
+             LEA         output, A6
 *             MOVE.W      lineNumber, output   
 *            MOVE.L      A5, D2
 *            MOVE.B      #8, hexlength
@@ -76,7 +76,6 @@ START:
 
             JSR         0(A0,D0)    *Jump indirect with index
 ContinueMain
-*            JSR         disOutput
 *            JSR         display
 * check read pointer location against EnDPt if end done
 * otherwise move back into read sub routine
@@ -90,7 +89,6 @@ ContinueMain
 jmp_table  
 
                JMP         code0000
-               RTS
 
                JMP         code0001
 
@@ -246,11 +244,11 @@ printImmediateData
 
 findImmediateData
                 CMPI.B      #0, D5
-                BEQ         incrPtByte
+                BEQ         getByte
                 CMPI.B      #1, D5
-                BEQ         incrPtWord
+                BEQ         GetWord
                 CMPI.B      #2, D5
-                BEQ         incrPtLong
+                BEQ         GetLong
 
 incrPtByte
                 MOVE.B      (A6)+, D4
@@ -265,6 +263,10 @@ incrPtLong
                 RTS      
                 
 DisImmediateData
+                JSR         printHash
+                JSR         printDollar
+                JSR         HexDecode
+                RTS
                                 
 
 *--------------MOVE.B Decode-----------------------------
@@ -465,7 +467,7 @@ printImmData
                 RTS
                                 
 printShiftRegister
-                JSR         disDnReg
+                JSR         disDataReg
                 JSR         printShiftXn
                 RTS
 
@@ -476,10 +478,7 @@ printShiftXnNumber
                 MOVE.B      #13, D2
                 LSR.W       D2, D1                
                 CMPI.B      #0, D1
-                BEQ         
-                MOVE.B      #3, D0
-                TRAP #15
-                
+                BEQ         out8                
                 RTS
                 
 printShiftXn                
@@ -519,11 +518,11 @@ printSize
 *------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     CMPI.B  #%000, D2 * last three are zeroes
-                BEQ     disDataReg       *jump to subroutine for Data register Source
+                BEQ     disDataRegMode       *jump to subroutine for Data register Source
                 BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
                 
 ModeCompare1    CMPI.B  #%001, D2
-                BEQ     disAddressReg
+                BEQ     disAddressRegMode
                 BNE     ModeCompare2
                 
 ModeCompare2    CMPI.B  #%010, D2
@@ -545,87 +544,81 @@ ModeCompare5    CMPI.B  #%111, D2
              
 
 *---------------------Register Compare---------------------                
-XnCompare       CMPI.b  #%000, D3
-                BEQ     Print0
-                BNE     XnCompare1
-                
-XnCompare1      CMPI.b  #%001, D3
-                BEQ     Print1
-                BNE     XnCompare2
 
-XnCompare2      CMPI.b  #%010, D3
-                BEQ     Print2
-                BNE     XnCompare3
-
-XnCompare3      CMPI.b  #%011, D3
-                BEQ     Print3
-                BNE     XnCompare4
-
-XnCompare4      CMPI.b  #%100, D3
-                BEQ     Print4
-                BNE     XnCompare5
-
-XnCompare5      CMPI.b  #%101, D3
-                BEQ     Print5
-                BNE     XnCompare6
-
-XnCompare6      CMPI.b  #%110, D3
-                BEQ     Print6
-                BNE     XnCompare7
-
-XnCompare7      CMPI.b  #%111, D3
-                BEQ     Print7
-                BNE     disError
                 * FIXME we may need to use this for a bad command BNE XnCompare1
 
 **--<EA> Mode Register
 *
 EACompare       CMPI.B  #%000,  D3
-                BEQ     GetWAddress
+                BEQ     GetWord
                 BNE     EACompare1
                 
 EACompare1      CMPI.B  #%001,  D3
-                BEQ     GetLAddress
+                BEQ     GetLong
                 BNE     EACompare4
                 
 EACompare4      CMPI.B  #%100,  D3
-                BEQ     MoveImmDataScan
+                BEQ     ImmDataScan
                 BNE     disError
                 
 **--<EA> After Mode
 
-GetWAddress     MOVE.W  (A6)+,  D4
+GetByte
+                MOVE.W  (A6)+,  D4
+                MOVE.B  #4,     hexLength
+                JSR     HexDecode
+                RTS
+
+GetWord         
+                MOVE.W  (A6)+,  D4
                 MOVE.B  #4,     hexLength
                 JSR     HexDecode
                 RTS
                 
-GetLAddress     MOVE.L  (A6)+,  D4
-                MOVE.B  #4,     hexLength
-                JSR     HexLongDecode
+GetLong         
+                MOVE.L  (A6)+,  D4
+                MOVE.B  #8,     hexLength
+                JSR     HexDecode
                 RTS
-
-
-MoveImmDataScan CMPI.B  #%01,   D5
-                BEQ     GetBData
-                CMPI.B  #%11,   D5
-                BEQ     GetWData
-                CMPI.B  #%10,   D5
-                BEQ     GetLData
-                BRA     disError
 
 ImmDataScan
+                CMPI.B  #4, opCodeNib
+                BLT     ImmDataTypeMove
+                
+                
+                
 
-GetBData        MOVE.B  (A6)+,  D4
-                *Print
-                RTS
 
-GetWData        MOVE.W  (A6)+,  D4
-                *Print
-                RTS
+ImmDataTypeMove 
+                MOVE.B  opCodeSize, D5
+                CMPI.B  #%00,   D5
+                BEQ     GetByte
+                CMPI.B  #%10,   D5
+                BEQ     GetWord
+                CMPI.B  #%11,   D5
+                BEQ     GetLong
+                BRA     disError
+                
+ImmDataType1Bit 
+                MOVE.B  opCodeSize, D5
+                CMPI.B  #%0,   D5
+                BEQ     GetWord
+                CMPI.B  #%1,   D5
+                BEQ     GetLong
+                BRA     disError
+                
+ImmDataType2Bit 
+                MOVE.B  opCodeSize, D5
+                CMPI.B  #%00,   D5
+                BEQ     GetByte
+                CMPI.B  #%10,   D5
+                BEQ     GetWord
+                CMPI.B  #%11,   D5
+                BEQ     GetLong
+                BRA     disError
 
-GetLData        MOVE.L  (A6)+,  D4
-                *Print
-                RTS
+
+
 
 RTSCommand
                 RTS
@@ -634,22 +627,6 @@ RTSCommand
 *                          DISPLAYS                             |
 *----------------------------------------------------------------
 
-*---------------------HEX Decoder------------------------
-HexByteDecode
-                CMPI.B      #2, counter
-                BEQ         RTSCommand
-                MOVE.B      D4, D0                
-                LSR.B       #4, D0
-                JSR         hexNumCompare
-                SUB.B      D0, D4
-                LSR.L       #4, D4
-          
-HexWordDecode
-
-
-HexLongDecode
-
-HexNumCompare
 
 
 
@@ -658,8 +635,8 @@ HexNumCompare
 
 *-------------------
 
-disDnRegMode    JSR     disDataReg
-
+disDataRegMode    
+                JSR     disDataReg
                 JSR     hexCompare
                 
                 CLR.L   D7
@@ -667,8 +644,8 @@ disDnRegMode    JSR     disDataReg
 
 *-------------------
                     
-disAnRegMode    JSR     disAnReg
-
+disAddressRegMode    
+                JSR     disAddressReg
                 JSR     HexCompare
                 
                 CLR.L   D7
@@ -677,7 +654,7 @@ disAnRegMode    JSR     disAnReg
 *-------------------
 
 disAnIndMode    JSR     disLeftParen
-                JSR     disAnReg
+                JSR     disAddressReg
                 
                 JSR     HexCompare
                 
@@ -690,9 +667,9 @@ disAnIndMode    JSR     disLeftParen
 *-------------------
 
 disAnPosMode    JSR     disLeftParen
-                JSR     disAnReg
+                JSR     disAddressReg
                 
-                JSR     XnCompare
+                JSR     HexCompare
                 
                 CLR.L   D7
                 
@@ -705,9 +682,9 @@ disAnPosMode    JSR     disLeftParen
 
 disAnPreMode    JSR     displayMinus
                 JSR     disLeftParen
-                JSR     disAnReg
+                JSR     disAddressReg
                 
-                JSR     XnCompare
+                JSR     HexCompare
                 
                 CLR.L   D7
                 
@@ -718,6 +695,7 @@ disAnPreMode    JSR     displayMinus
                 
 *-------------------
 disEALong
+                
 disEAWord
 disImmData
 
@@ -730,6 +708,7 @@ disImmData
 
 disDataReg      
                 MOVE.B  #$44, (A6)+
+                JSR     hexCompare
                 RTS
 
 
@@ -763,6 +742,9 @@ displayLine     MOVE.B  #$A, (A6)+
 *-----------Numbers------------               
 
 printHash       MOVE.B  #$23, (A6)+
+                RTS
+
+printDollar     MOVE.B  #$24, (A6)+
                 RTS
 
 *----------OpCode-----------------                
@@ -967,10 +949,14 @@ outRTS
                 MOVE.B      #$54, (A6)+
                 MOVE.B      #$53, (A6)+
                 RTS
-                                
+
+out8
+                MOVE.B      #$38, (A6)+
+                RTS                                
 
 
 *----------------opCode Helpers----------
+*---------------Direction----------------
 outDirectionL
                 MOVE.B      #$4C, (A6)+
                 RTS
@@ -978,7 +964,8 @@ outDirectionL
 outDirectionR
                 MOVE.B      #$52, (A6)+
                 RTS
-                
+
+*---------------Size----------------------                
 outSizeByte
                 MOVE.B  #$2E, (A6)+
                 MOVE.B  #$42, (A6)+
@@ -1007,8 +994,6 @@ setCharToHex
         BLT     charIsNum       *number
         CMPI.B  #$41, D2
         BGT     isLetterChkType
-backToloop
-        BRA     setCharToHex
 
 charIsNum
         SUBI.B      #$30, D2
@@ -1042,16 +1027,15 @@ doneLoadASCII
 *---------------------------------------------------------------- 
 
 HexDecode
-        ADDI.B   #1, counter 
-        ROL.W   #4, D2  
-        MOVE.B  D2, D3
+        ADDI.B  #1, counter 
+        ROL.W   #4, D4  
+        MOVE.B  D4, D3
         LSL.B   #4, D3
         LSR.B   #4, D3
         JSR     HexCompare
-        MOVE.B   HexLength, D0
-        CMP.B  counter, D0
+        MOVE.B  HexLength, D0
+        CMP.B   counter, D0
         BNE     HexDecode
-        MOVE.B  #$0, (A3)+
         RTS
         
           
@@ -1093,65 +1077,28 @@ DONE
 * Put variables and constants here
 Error DC.B  'error', 0
 
-MOVEByteDis     DC.B    'MOVE.B ', 0
-MOVEWordDis     DC.B    'MOVE.W ', 0   
-MOVELongDis     DC.B    'MOVE.L ', 0
-
-AsymmShift      DC.B    'AS', 0
-
-logicShift      DC.B    'LS', 0
-
-rotateShift     DC.B    'RO', 0
-
-
-
-byteSize        DC.B    '.B ', 0
-wordSize        DC.B    '.W ', 0
-longSize        DC.B    '.L ', 0
-
-leftDir         DC.B    'L', 0
-rightDir        DC.B    'R', 0
-
-hashtag         DC.B    '#', 0
-
-DnReg           DC.B    'D', 0
-AnReg           DC.B    'A', 0
-LeftParen       DC.B    '(', 0
-RightParen      DC.B    ')', 0
-disPlus         DC.B    '+', 0
-disMinus        DC.B    '-', 0
-disComma        DC.B    ',', 0
-disSpace        DC.B    ' ', 0
-ASKSTART        DC.B    'Identify the starting memory location: ', 0
-ASKEND          DC.B    'Identify the ending memory location: ', 0
-
-*numbers
-disZero         DC.B    '0', 0
-disOne          DC.B    '1', 0
-disTwo          DC.B    '2', 0
-disThree        DC.B    '3', 0
-disFour         DC.B    '4', 0
-disFive         DC.B    '5', 0
-disSix          DC.B    '6', 0
-disSeven        DC.B    '7', 0
-disEight        DC.B    '8', 0
-disNine         DC.B    '9', 0
-
-disA            DC.B    'A', 0
-disB            DC.B    'B', 0
-disC            DC.B    'C', 0
-disD            DC.B    'D', 0
-disE            DC.B    'E', 0
-disF            DC.B    'F', 0
-
-disNewLine      DC.B    '', 0
+counter         DS.W    1
+hexlength       DS.B    1
 
 lineNumber      DS.W    1
 
-counter         DS.W    1
-hexlength       DS.B    1
-OpCodeSize      DS.B    1
+OpCodeNib       DS.B    1
+OpCodeDir       DS.B    1
 
+OpCodeSize      DS.B    1
+bitsOfSize      DS.B    1
+
+SrcMode         DS.B    1
+SrcReg          DS.B    1
+
+DesMode         DS.B    1
+DesReg          DS.B    1
+
+EAword          DS.W    1
+EAlong          DS.L    1
+
+ImmDataSize     DS.B    1
+ImmData         DS.L    1
 
 STARTPT         DS.L    1
 ENDPT           DS.L    1
