@@ -10,7 +10,8 @@
 *-----------------------------------------------------------
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %0001000000001111    * I made up bits 0 to 11      
+example   EQU %0001000000111001 
+exampleEA EQU %1111111111111111     * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -21,32 +22,32 @@ START:
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
 *        
-*        LEA     ASKSTART, A1    *message to ask user for input
-*        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
-*        TRAP    #15             *Display A1 message
-*        
-*        LEA     STARTPT, A1
-*        MOVE.B  #2, D0          *input rule saves to D1
-*        TRAP    #15             *initiate read from keyboard
-*        
-*        JSR     setCharToHex    
-*        
-*        MOVE.L  D4, STARTPT
-*        
-*        CLR.L     D4
-*        CLR       D6
-*        
-*        LEA     ASKEND, A1      *ask about ending memory location
-*        MOVE.B  #13, D0         
-*        TRAP    #15             *display A1
-*        
-*        LEA     ENDPT, A1       
-*        MOVE.B  #2, D0          *
-*        TRAP    #15
-*        
-*        JSR     setCharToHex
-*        
-*        MOVE.L  D4, ENDPT
+        LEA     ASKSTART, A1    *message to ask user for input
+        MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
+        TRAP    #15             *Display A1 message
+        
+        LEA     STARTPT, A1
+        MOVE.B  #2, D0          *input rule saves to D1
+        TRAP    #15             *initiate read from keyboard
+        
+        JSR     setCharToHex    
+        
+        MOVE.L  D4, STARTPT
+        
+        CLR.L     D4
+        CLR       D6
+        
+        LEA     ASKEND, A1      *ask about ending memory location
+        MOVE.B  #13, D0         
+        TRAP    #15             *display A1
+        
+        LEA     ENDPT, A1       
+        MOVE.B  #2, D0          *
+        TRAP    #15
+        
+        JSR     setCharToHex
+        
+        MOVE.L  D4, ENDPT
         
         CLR     D4
         CLR     D6
@@ -55,20 +56,22 @@ START:
 
         CLR.L   D0              *Zero it
         CLR.L   D1
-*        MOVE.W  #0, lineNumber
-*        MOVE.L      STARTPT, A5
+        MOVE.W  #0, lineNumber
+        MOVE.L      STARTPT, A5
 *Get word  element
-*MainLoop            
-*            CMPA.L      ENDPT, A5
-*            BEQ         DONE         
-*            ADDI.W      #1, lineNumber
-             LEA         output, A6
-*             MOVE.W      lineNumber, output   
-*            MOVE.L      A5, D2
-*            MOVE.B      #8, hexlength
-*            JSR         hexdecode
-*            MOVE.W      (A5)+,D6     *variable put in place
-            MOVE.W      #example, D6        
+MainLoop            
+            CMPA.L      ENDPT, A5
+            BEQ         DONE         
+            ADDI.W      #1, lineNumber
+            LEA         output, A6
+            MOVE.L      A5, lineAddress
+            JSR         displaySpace
+            MOVE.B      #8, hexlength
+            MOVE.L      lineAddress, D4
+            JSR         hexDecode
+            JSR         displaySpace
+            MOVE.W      (A5)+,D6     *variable put in place
+*            MOVE.W      #example, D6        
             MOVE.W      D6, D0
             MOVE.B      #shift12,D1       *Shift 12 bits to the right  
             LSR.W       D1,D0           *Move the bits
@@ -77,6 +80,9 @@ START:
             JSR         0(A0,D0)    *Jump indirect with index
 ContinueMain
 *            JSR         display
+            MOVE.B      #$00, (A6)+
+            JSR         displayOutput
+            BRA         MainLoop    
 * check read pointer location against EnDPt if end done
 * otherwise move back into read sub routine
                     
@@ -192,19 +198,21 @@ GroupZeroType
                 LSL.W       #8, D5
                 MOVE.B      #14,D1
                 LSR.W       D1, D5
+                MOVE.W      D5, OpCodeSize
 *-----------Mode--------------------------------------
                 MOVE.W      D6, D2
                 MOVE.B      #10, D1
                 LSL.W       D1, D2
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
+                
+                *which mode source or destination
 
 *-----------Register Number-------------------
                 MOVE.W      D6, D3
                 MOVE.B      #13, D1
                 LSL.W       D1,D3
                 LSR.W       D1,D3
-
 
 *-------------Identifier set------------------                
                 MOVE.W      D6, D0
@@ -225,8 +233,7 @@ GroupZeroCompare
 ORIopCode
 *                JSR         disORIopCode
                 JSR         printSize
-                JSR         printHash
-                JSR         printImmediateData
+                JSR         disImmData
        
 
 BTSTopCode
@@ -237,36 +244,7 @@ CMPIopCode
 EORIopCode
 
 
-printImmediateData
-                JSR         findImmediateData
-                JSR         disImmediateData
-                RTS
 
-findImmediateData
-                CMPI.B      #0, D5
-                BEQ         getByte
-                CMPI.B      #1, D5
-                BEQ         GetWord
-                CMPI.B      #2, D5
-                BEQ         GetLong
-
-incrPtByte
-                MOVE.B      (A6)+, D4
-                RTS
-                
-incrPtWord
-                MOVE.W      (A6)+, D4
-                RTS
-                
-incrPtLong          
-                MOVE.L      (A6)+, D4
-                RTS      
-                
-DisImmediateData
-                JSR         printHash
-                JSR         printDollar
-                JSR         HexDecode
-                RTS
                                 
 
 *--------------MOVE.B Decode-----------------------------
@@ -324,6 +302,7 @@ MoveSrcXnDecode
                 MOVE.B  #shift13, D1
                 LSR.W   D1,D0        *format is good last three bits in least signifant location
                 MOVE.W  D0, D3
+                MOVE.W  D3, Reg
                 BRA     MoveSrcModeDecode
       
 MoveSrcModeDecode
@@ -337,6 +316,7 @@ MoveSrcModeDecode
                 
                 LSR.W   #3, D0   *D2 now has the mode
                 MOVE.W  D0, D2
+                MOVE.W  D2, Mode
                 JSR     ModeCompare
                 RTS    
 
@@ -356,7 +336,7 @@ MoveDesXnDecode
                 
                 LSR.W   D1, D0    *isolates Xn
                 MOVE.W  D0, D3
-                
+                MOVE.W  D3, Reg
                 BRA     MoveDesModeDecode
         
 MoveDesModeDecode  
@@ -371,6 +351,7 @@ MoveDesModeDecode
                 MOVE.B  #shift13, D1
                 LSR.W   D1, D0       *mode isolated
                 MOVE.W  D0, D2
+                MOVE.W  D2, Mode
                 JSR     ModeCompare
                 RTS
 
@@ -457,14 +438,9 @@ RotShiftGroup
 *--------BIT SHifting helper functions---------
 ShiftGrpCount
                 CMPI.B      #0, D7
-                BEQ         printImmData
+                BEQ        outImmData
                 BNE         printShiftRegister    
 
-
-printImmData    
-                JSR         printHash
-                JSR         printShiftXnNumber
-                RTS
                                 
 printShiftRegister
                 JSR         disDataReg
@@ -478,7 +454,7 @@ printShiftXnNumber
                 MOVE.B      #13, D2
                 LSR.W       D2, D1                
                 CMPI.B      #0, D1
-                BEQ         out8                
+                BEQ         out8   *special case             
                 RTS
                 
 printShiftXn                
@@ -517,7 +493,9 @@ printSize
 
 *------------------Mode Comparisons -----------------------------------------
 
-ModeCompare     CMPI.B  #%000, D2 * last three are zeroes
+ModeCompare     
+                MOVE.W  Mode, D2
+                CMPI.B  #%000, D2 * last three are zeroes
                 BEQ     disDataRegMode       *jump to subroutine for Data register Source
                 BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
                 
@@ -549,45 +527,53 @@ ModeCompare5    CMPI.B  #%111, D2
 
 **--<EA> Mode Register
 *
-EACompare       CMPI.B  #%000,  D3
+EACompare       
+                MOVE.W  Reg, D3
+                CMPI.B  #%000,  D3
                 BEQ     GetWord
                 BNE     EACompare1
                 
 EACompare1      CMPI.B  #%001,  D3
                 BEQ     GetLong
-                BNE     EACompare4
+                BNE     EACompareData
                 
-EACompare4      CMPI.B  #%100,  D3
+EACompareData   CMPI.B  #%100,  D3
                 BEQ     ImmDataScan
                 BNE     disError
                 
 **--<EA> After Mode
 
 GetByte
-                MOVE.W  (A6)+,  D4
-                MOVE.B  #4,     hexLength
+                MOVE.W  (A5)+,  D4
+                MOVE.B  #2,     hexLength *iterations of nibbles to take
+                CLR.B     counter     *before you call hex decode zero conter
                 JSR     HexDecode
                 RTS
 
 GetWord         
-                MOVE.W  (A6)+,  D4
+                MOVE.W  (A5)+,  D4
                 MOVE.B  #4,     hexLength
+                CLR.B     counter ***
                 JSR     HexDecode
                 RTS
                 
 GetLong         
-                MOVE.L  (A6)+,  D4
+                MOVE.L  (A5)+,  D4
                 MOVE.B  #8,     hexLength
+                CLR.B     counter
                 JSR     HexDecode
                 RTS
+                
+*----------------------------------------------
 
-ImmDataScan
-                CMPI.B  #4, opCodeNib
+ImmDataScan *find Immediate data type and store --- USE bitsOfSize
+                CMPI.B  #4, opCodeNib *takes care of MOVE group
                 BLT     ImmDataTypeMove
-                
-                
-                
-
+                CMPI.B  #1, bitsOfSize *number of bits of the Size for this particular machine code
+                BEQ     ImmDataType1Bit
+                CMPI.B  #2, bitsOfSize
+                BEQ     ImmDataType2Bit
+                BRA     disError
 
 ImmDataTypeMove 
                 MOVE.B  opCodeSize, D5
@@ -615,9 +601,16 @@ ImmDataType2Bit
                 BEQ     GetWord
                 CMPI.B  #%11,   D5
                 BEQ     GetLong
-                BRA     disError
+                BRA     disError                
+               
 
-
+outImmData
+                MOVE.B  ImmData, D4 *this is the temp copy for the Hex decode
+                MOVE.B  ImmDataSize, HexLength
+                CLR.B     counter *reset Counter before every Hex Decode
+                MOVE.B  #8, hexlength
+                JSR     HexDecode
+                RTS
 
 
 RTSCommand
@@ -633,7 +626,7 @@ RTSCommand
 *---------------------MODE Displays Methods----------------------
 
 
-*-------------------
+*-----------Data Register--------------------
 
 disDataRegMode    
                 JSR     disDataReg
@@ -642,7 +635,7 @@ disDataRegMode
                 CLR.L   D7
                 RTS
 
-*-------------------
+*--------Address Register---------------------
                     
 disAddressRegMode    
                 JSR     disAddressReg
@@ -651,7 +644,7 @@ disAddressRegMode
                 CLR.L   D7
                 RTS
 
-*-------------------
+*-------Indirect Address Register----------------
 
 disAnIndMode    JSR     disLeftParen
                 JSR     disAddressReg
@@ -664,7 +657,7 @@ disAnIndMode    JSR     disLeftParen
                 
                 RTS
                 
-*-------------------
+*----Indirect Address Register Post Increment----
 
 disAnPosMode    JSR     disLeftParen
                 JSR     disAddressReg
@@ -678,7 +671,7 @@ disAnPosMode    JSR     disLeftParen
                 
                 RTS
 
-*-------------------
+*----Indirect Address Register Pre Decrement-----------
 
 disAnPreMode    JSR     displayMinus
                 JSR     disLeftParen
@@ -693,11 +686,22 @@ disAnPreMode    JSR     displayMinus
                 CLR.L   D7
                 RTS
                 
-*-------------------
+*-----------Effective Address Long Size------------
 disEALong
-                
+                JSR     printDollar
+*                JSR     outEAword
+                RTS
+*-----------Effective Address Word Size------------                
 disEAWord
+                JSR     printDollar
+*                JSR     outEAlong
+                RTS
+*------------Immediate Data-----------------------                
 disImmData
+                JSR     printHash
+                JSR     printDollar
+                JSR     outImmData
+                RTS
 
       
                       
@@ -708,7 +712,6 @@ disImmData
 
 disDataReg      
                 MOVE.B  #$44, (A6)+
-                JSR     hexCompare
                 RTS
 
 
@@ -717,6 +720,7 @@ disAddressReg
                 RTS
 
 disLeftParen    MOVE.B  #$28, (A6)+
+        
                 RTS
                 
 disRightParen   MOVE.B  #$20, (A6)+
@@ -1028,7 +1032,7 @@ doneLoadASCII
 
 HexDecode
         ADDI.B  #1, counter 
-        ROL.W   #4, D4  
+        ROL.L   #4, D4  
         MOVE.B  D4, D3
         LSL.B   #4, D3
         LSR.B   #4, D3
@@ -1062,7 +1066,15 @@ disError
                 Trap    #15
                 RTS 
 
-
+displayOutput
+                LEA     LineNumber, A1
+                MOVE.B  #3, D0
+                TRAP    #15
+               
+                LEA     output, A1
+                MOVE.B  #14, D0
+                TRAP    #15
+                RTS
     
 DONE
 *        BRA         START
@@ -1075,24 +1087,24 @@ DONE
 *----------------------------------------------------------------
 
 * Put variables and constants here
-Error DC.B  'error', 0
+Error           DC.B    'error', 0
+ASKStart        DC.B    'Starting Location: ',0
+ASKEnd          DC.B    'Ending Location: ',0
 
-counter         DS.W    1
+counter         DS.B    1
 hexlength       DS.B    1
 
+lineAddress     DS.L    1
 lineNumber      DS.W    1
 
-OpCodeNib       DS.B    1
-OpCodeDir       DS.B    1
+OpCodeNib       DS.W    1
+OpCodeDir       DS.W    1
 
-OpCodeSize      DS.B    1
+OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1
 
-SrcMode         DS.B    1
-SrcReg          DS.B    1
-
-DesMode         DS.B    1
-DesReg          DS.B    1
+Mode            DS.W    1 *no need to duplicate only focus on source or destination at one time, not both.
+Reg             DS.W    1 ************
 
 EAword          DS.W    1
 EAlong          DS.L    1
