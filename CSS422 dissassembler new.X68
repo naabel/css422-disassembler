@@ -250,7 +250,7 @@ EORIopCode
 *--------------MOVE.B Decode-----------------------------
 
 MoveByte        JSR     disMoveByte
-
+                MOVE.W  #1, opcodeSize
 *continue searching through the machine code for source then destination
 *because of writing format
                 JSR     MoveSrcDecode * src decode
@@ -265,7 +265,7 @@ MoveByte        JSR     disMoveByte
 *--------------MOVE.W Decode-----------------------------
 
 MoveWord        JSR     disMoveWord
-
+                MOVE.W  #3, opCodeSize
                 JSR     MoveSrcDecode * src decode
                 JSR     displayComma
                 JSR     displaySpace
@@ -278,7 +278,7 @@ MoveWord        JSR     disMoveWord
 *--------------MOVE.L Decode-----------------------------
 
 MoveLong        JSR     disMoveLong
-
+                MOVE.W  #2, opCodeSize
                 JSR     MoveSrcDecode * src decode
                 JSR     displayComma
                 JSR     displaySpace
@@ -544,20 +544,27 @@ EACompareData   CMPI.B  #%100,  D3
 **--<EA> After Mode
 
 GetByte
+                JSR     printDollar
                 MOVE.W  (A5)+,  D4
                 MOVE.B  #2,     hexLength *iterations of nibbles to take
                 CLR.B     counter     *before you call hex decode zero conter
+                MOVE.B  #24, D2
+                LSL.L   D2, D4
                 JSR     HexDecode
                 RTS
 
 GetWord         
+                JSR     printDollar
                 MOVE.W  (A5)+,  D4
                 MOVE.B  #4,     hexLength
                 CLR.B     counter ***
+                MOVE.B  #16, D2
+                LSL.L   D2, D4
                 JSR     HexDecode
                 RTS
                 
 GetLong         
+                JSR     printDollar
                 MOVE.L  (A5)+,  D4
                 MOVE.B  #8,     hexLength
                 CLR.B     counter
@@ -567,6 +574,7 @@ GetLong
 *----------------------------------------------
 
 ImmDataScan *find Immediate data type and store --- USE bitsOfSize
+                JSR     printHash
                 CMPI.B  #4, opCodeNib *takes care of MOVE group
                 BLT     ImmDataTypeMove
                 CMPI.B  #1, bitsOfSize *number of bits of the Size for this particular machine code
@@ -576,17 +584,17 @@ ImmDataScan *find Immediate data type and store --- USE bitsOfSize
                 BRA     disError
 
 ImmDataTypeMove 
-                MOVE.B  opCodeSize, D5
-                CMPI.B  #%00,   D5
+                MOVE.W  opCodeSize, D5
+                CMPI.B  #%01,   D5
                 BEQ     GetByte
-                CMPI.B  #%10,   D5
-                BEQ     GetWord
                 CMPI.B  #%11,   D5
+                BEQ     GetWord
+                CMPI.B  #%10,   D5
                 BEQ     GetLong
                 BRA     disError
                 
 ImmDataType1Bit 
-                MOVE.B  opCodeSize, D5
+                MOVE.W  opCodeSize, D5
                 CMPI.B  #%0,   D5
                 BEQ     GetWord
                 CMPI.B  #%1,   D5
@@ -594,7 +602,7 @@ ImmDataType1Bit
                 BRA     disError
                 
 ImmDataType2Bit 
-                MOVE.B  opCodeSize, D5
+                MOVE.W  opCodeSize, D5
                 CMPI.B  #%00,   D5
                 BEQ     GetByte
                 CMPI.B  #%10,   D5
@@ -605,10 +613,9 @@ ImmDataType2Bit
                
 
 outImmData
-                MOVE.B  ImmData, D4 *this is the temp copy for the Hex decode
-                MOVE.B  ImmDataSize, HexLength
+                MOVE.L  ImmData, D4 *this is the temp copy for the Hex decode
+                MOVE.W  ImmDataSize, HexLength
                 CLR.B     counter *reset Counter before every Hex Decode
-                MOVE.B  #8, hexlength
                 JSR     HexDecode
                 RTS
 
@@ -1034,6 +1041,7 @@ HexDecode
         ADDI.B  #1, counter 
         ROL.L   #4, D4  
         MOVE.B  D4, D3
+*        MOVE.B  #28,D2
         LSL.B   #4, D3
         LSR.B   #4, D3
         JSR     HexCompare
@@ -1119,6 +1127,7 @@ Output          DS.L    10
  
     END START          
        ; last line of source
+
 
 
 
