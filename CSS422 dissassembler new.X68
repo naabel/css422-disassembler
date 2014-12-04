@@ -1067,7 +1067,7 @@ disError
                 RTS 
 
 displayOutput
-                LEA     LineNumber, A1
+                MOVE.W  lineNumber, D1
                 MOVE.B  #3, D0
                 TRAP    #15
                
@@ -1119,6 +1119,7 @@ Output          DS.L    10
  
     END START          
        ; last line of source
+
 
 
 
