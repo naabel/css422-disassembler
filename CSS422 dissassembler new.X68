@@ -68,6 +68,7 @@ MainLoop
             JSR         displaySpace
             MOVE.B      #8, hexlength
             MOVE.L      lineAddress, D4
+            CLR.B         counter
             JSR         hexDecode
             JSR         displaySpace
             MOVE.W      (A5)+,D6     *variable put in place
@@ -730,7 +731,7 @@ disLeftParen    MOVE.B  #$28, (A6)+
         
                 RTS
                 
-disRightParen   MOVE.B  #$20, (A6)+
+disRightParen   MOVE.B  #$29, (A6)+
                 RTS
                 
               
@@ -746,7 +747,7 @@ displayComma    MOVE.B  #$2C, (A6)+
 displaySpace    MOVE.B  #$20, (A6)+
                 RTS
                 
-displayLine     MOVE.B  #$A, (A6)+
+displayLine     ;MOVE.B  #$A, (A6)+
                 RTS
                 
                 
@@ -1080,7 +1081,7 @@ displayOutput
                 TRAP    #15
                
                 LEA     output, A1
-                MOVE.B  #14, D0
+                MOVE.B  #13, D0
                 TRAP    #15
                 RTS
     
@@ -1127,6 +1128,7 @@ Output          DS.L    10
  
     END START          
        ; last line of source
+
 
 
 
