@@ -42,7 +42,7 @@ START:
         TRAP    #15             *display A1
         
         LEA     ENDPT, A1       
-        MOVE.B  #2, D0          *
+        MOVE.B  #2, D0
         TRAP    #15
         
         JSR     setCharToHex
@@ -58,8 +58,11 @@ START:
         CLR.L   D1
         MOVE.W  #0, lineNumber
         MOVE.L      STARTPT, A5
-*Get word  element
-MainLoop            
+        
+        CLR.B   NumDisplayed
+        
+MainLoop    *Get word  element
+            JSR         CheckNumDisplayed
             CMPA.L      ENDPT, A5
             BEQ         DONE         
             ADDI.W      #1, lineNumber
@@ -68,25 +71,39 @@ MainLoop
             JSR         displaySpace
             MOVE.B      #8, hexlength
             MOVE.L      lineAddress, D4
-            CLR.B         counter
+            CLR.B       counter
             JSR         hexDecode
             JSR         displaySpace
-            MOVE.W      (A5)+,D6     *variable put in place
-*            MOVE.W      #example, D6        
+            MOVE.W      (A5)+,D6            *variable put in place
+            *MOVE.W      #example, D6        
             MOVE.W      D6, D0
-            MOVE.B      #shift12,D1       *Shift 12 bits to the right  
-            LSR.W       D1,D0           *Move the bits
-            MULU        #6,D0       *Form offset     
+            MOVE.B      #shift12,D1         *Shift 12 bits to the right  
+            LSR.W       D1,D0               *Move the bits
+            MULU        #6,D0               *Form offset     
 
-            JSR         0(A0,D0)    *Jump indirect with index
+            JSR         0(A0,D0)            *Jump indirect with index
+            
 ContinueMain
-*            JSR         display
+            *JSR         display
             MOVE.B      #$00, (A6)+
             JSR         displayOutput
-            BRA         MainLoop    
-* check read pointer location against EnDPt if end done
-* otherwise move back into read sub routine
-                    
+            ADD.B       #1,     NumDisplayed
+            BRA         MainLoop
+            
+            * check read pointer location against EnDPt if end done
+            * otherwise move back into read sub routine
+
+CheckNumDisplayed
+            CMP.B       #10,            NumDisplayed
+            BLT         Continue
+            LEA         AskToContinue,  A1
+            MOVE.B      #13,            D0
+            TRAP        #15
+            MOVE.B      #5,             D0
+            TRAP        #15
+            CLR.B       NumDisplayed
+Continue    RTS
+            
 
 *----------------------------------------------------------------
 *                       OpCode ID Table                         |
@@ -1102,6 +1119,7 @@ DONE
 Error           DC.B    'error', 0
 ASKStart        DC.B    'Starting Location: ',0
 ASKEnd          DC.B    'Ending Location: ',0
+AskToContinue   DC.B    'Hit any key to continue',0
 
 counter         DS.B    1
 hexlength       DS.B    1
@@ -1133,9 +1151,12 @@ STARTPT         DS.L    1
 ENDPT           DS.L    1
 
 Output          DS.L    10
+
+NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
 
 
 
