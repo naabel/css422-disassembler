@@ -72,6 +72,7 @@ MainLoop
             JSR         hexDecode
             JSR         displaySpace
             MOVE.W      (A5)+,D6     *variable put in place
+            MOVE.W      D6, fullOpcode
 *            MOVE.W      #example, D6        
             MOVE.W      D6, D0
             MOVE.B      #shift12,D1       *Shift 12 bits to the right  
@@ -187,13 +188,13 @@ code1111       STOP        #$2700
 GroupZero       BRA        GroupZeroType
 
 GroupZeroType   
-                CLR         D0
-                CLR         D1  *temp variables
-                CLR         D2  *Mode    
-                CLR         D3  *Number
-                CLR         D4  *Memory increment save
-                CLR         D5  *size
-                CLR         D7  *
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
 *----------- store size-------------------------------
                 MOVE.W      D6, D5
                 LSL.W       #8, D5
@@ -250,7 +251,8 @@ EORIopCode
 
 *--------------MOVE.B Decode-----------------------------
 
-MoveByte        JSR     disMoveByte
+MoveByte        
+                JSR     disMoveByte
                 MOVE.W  #1, opcodeSize
 *continue searching through the machine code for source then destination
 *because of writing format
@@ -366,13 +368,13 @@ MoveDesModeDecode
 bitShiftGroup            BRA bitShiftType
 
 bitShiftType
-                CLR         D0
-                CLR         D1
-                CLR         D2  *    
-                CLR         D3  *
-                CLR         D4  *will store direction of opcode
-                CLR         D5  *size
-                CLR         D7  *i/r
+                CLR.L         D0
+                CLR.L         D1
+                CLR.L         D2  *    
+                CLR.L         D3  *
+                CLR.L         D4  *will store direction of opcode
+                CLR.L         D5  *size
+                CLR.L         D7  *i/r
                 
 *------------       store direction bit               
                 MOVE.W      D6, D4
@@ -389,7 +391,27 @@ bitShiftType
                 LSL.B       #2, D7
                 LSR.B       #7, D7
                 MOVE.W      D7, ImmOrReg
-*-------------
+*-------------      store sourceReg
+                MOVE.W      D6, D2
+                LSL.W       #4, D2
+                MOVE.B      #13, D1
+                LSR.W       D1, D2
+                MOVE.W      D2, ShiftRegOrCount
+*-------------      store DesMode
+                MOVE.W      D6, D2
+                MOVE.W      #10, D1
+                LSL.W       D1, D2
+                MOVE.W      #13, D1
+                LSR.W       D1, D2
+                MOVE.W      D2, Mode
+
+*-------------      store DesXn
+                MOVE.W      D6, D2
+                MOVE.W      #13, D1
+                LSL.W       D1, D2
+                LSR.W       D1, D2
+                MOVE.W      D2, Reg               
+ 
                 
 *-------------      store type
                 MOVE.W      D6, D0             
@@ -410,41 +432,73 @@ BitShiftTypeCompare
                 
 
 LogShiftGroup
-                JSR         disLogicShift    
+                JSR         disLogicShift
+                MOVE.W      OpcodeDirection, D0    
                 JSR         printDirection
+                MOVE.W      OpcodeSize, D5
                 JSR         printSize
-                JSR         ShiftGrpCount
+                JSR         printShiftFront
                 JSR         displayComma
                 JSR         displaySpace
-                JSR         printShiftRegister
+                JSR         printShiftBack
+                RTS
 
 AsyShiftGroup
                 JSR         disAsymmShift    
                 JSR         printDirection
                 JSR         printSize
-                JSR         ShiftGrpCount
+                JSR         printShiftFront
                 JSR         displayComma
                 JSR         displaySpace
-                JSR         printShiftRegister
+                JSR         printShiftBack
+                RTS
 
 
 RotShiftGroup
                 JSR         disRotateShift    
                 JSR         printDirection
                 JSR         printSize
-                JSR         ShiftGrpCount
+                JSR         printShiftFront
                 JSR         displayComma
                 JSR         displaySpace
-                JSR         printShiftRegister
+                JSR         printShiftBack
+                RTS
 
 
 
-*--------BIT SHifting helper functions---------
-ShiftGrpCount
-                CMPI.B      #0, D7
-                BEQ        outImmData
-                BNE         printShiftRegister    
+*--------BIT SHifting helper functions---------   
+printShiftFront
+                CLR.L       D1
+                MOVE.W      ShiftRegOrCount, D1
+                MOVE.B      #1, D2
+                CMP.W       ImmOrReg, D2
+                BEQ         printShiftRegister
+                BNE         printShiftImm
+                RTS
 
+printShiftBack
+                CLR.L       D1
+                MOVE.W      Reg, D1
+                MOVE.B      #3, D2
+                CMP.W       OpCodeSize, D2
+                BEQ         ShiftCheckEA
+                BNE         printShiftRegister
+                RTS
+                
+ShiftCheckEA
+                CLR.L       D1         
+                MOVE.W      #1, D1
+                CMP.W       ShiftRegOrCount, D1
+                BEQ         printShiftMode
+                MOVE.W      Reg, D1
+                BNE         printShiftRegister
+printShiftImm 
+                CLR.L       D1
+                JSR         printHash
+                JSR         printDollar
+                MOVE.W      ShiftRegOrCount, D1
+                JSR         printShiftXn
+                RTS
                                 
 printShiftRegister
                 JSR         disDataReg
@@ -452,23 +506,36 @@ printShiftRegister
                 RTS
 
                 
-printShiftXnNumber
-                MOVE.W      D6, D1
-                LSL.W       #4, D1
-                MOVE.B      #13, D2
-                LSR.W       D2, D1                
-                CMPI.B      #0, D1
-                BEQ         out8   *special case             
+printShiftXn *analyzes D1
+                MOVE.W      D1, D3
+                ROR.L       #4, D1
+                MOVE.B      #0, D2
+                CMP.W       ImmOrReg, D2
+                BEQ         printShiftXnCompare
+                MOVE.L      D1, D4
+                CLR.B       Counter
+                MOVE.B      #1, HexLength
+                JSR         HexDecode
+                RTS
+
+
+
+printShiftXnCompare                
+                CMPI.W      #0, D3
+                BEQ         out8   *special case
+                MOVE.B      #1, ImmDataSize
+                MOVE.L      D1, ImmData
+                JSR         outImmData   
                 RTS
                 
-printShiftXn                
-                MOVE.W      D6, D3
-                MOVE.B      #13, D2
-                LSL.W       D2, D3
-                LSR.W       D2, D3                
-                JSR         HexCompare
-                
-                RTS
+printShiftMode  *can only be an effective address
+                MOVE.W        Mode, D2
+                MOVE.W        Reg, D3  
+                JSR           EACompare
+                RTS  
+                                  
+
+                     
 
 *-------------Helper Functions-----------     
 printDirection
@@ -618,8 +685,8 @@ ImmDataType2Bit
 
 outImmData
                 MOVE.L  ImmData, D4 *this is the temp copy for the Hex decode
-                MOVE.W  ImmDataSize, HexLength
-                CLR.B     counter *reset Counter before every Hex Decode
+                MOVE.B  ImmDataSize, HexLength
+                CLR.B   counter *reset Counter before every Hex Decode
                 JSR     HexDecode
                 RTS
 
@@ -803,10 +870,16 @@ outMove
                 MOVE.B      #$4F, (A6)+
                 MOVE.B      #$56, (A6)+
                 MOVE.B      #$45, (A6)+
+                JSR         CheckMoveA
                 RTS
 
-outMoveA
-                JSR         outMove
+CheckMoveA      
+                MOVE.W      fullOpcode, D1
+                LSL.W       #7, D1
+                MOVE.B      #13, D0
+                LSR.W       D0, D1
+                CMPI.W      #%001, D1
+                BNE         RTSCommand
                 MOVE.B      #$41, (A6)+
                 RTS
                 
@@ -965,7 +1038,7 @@ outRTS
                 MOVE.B      #$53, (A6)+
                 RTS
 
-out8
+out8            
                 MOVE.B      #$38, (A6)+
                 RTS                                
 
@@ -1079,6 +1152,7 @@ disError
                 RTS 
 
 displayOutput
+                CLR.L   D1
                 MOVE.W  lineNumber, D1
                 MOVE.B  #3, D0
                 TRAP    #15
@@ -1109,6 +1183,7 @@ hexlength       DS.B    1
 lineAddress     DS.L    1
 lineNumber      DS.W    1
 
+fullOpcode      DS.W    1
 OpCodeNib       DS.W    1
 OpCodeDir       DS.W    1
 
@@ -1120,6 +1195,9 @@ OpCodeDirection DS.W    1
 
 Mode            DS.W    1 *no need to duplicate only focus on source or destination at one time, not both.
 Reg             DS.W    1 ************
+ShiftRegOrCount DS.W    1
+
+
 
 EAword          DS.W    1
 EAlong          DS.L    1
@@ -1136,6 +1214,7 @@ Output          DS.L    10
  
     END START          
        ; last line of source
+
 
 
 
