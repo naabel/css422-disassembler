@@ -379,13 +379,16 @@ bitShiftType
                 LSL.W       #7, D4
                 MOVE.B      #15, D1
                 LSR.W       D1, D4
+                MOVE.W      D4, OpCodeDirection
 *-------------      store size bits
                 MOVE.B      D6, D5
                 LSR.B       #6, D5
+                MOVE.W      D5, opCodeSize
 *--------------     store i/r
                 MOVE.B      D6, D7
                 LSL.B       #2, D7
                 LSR.B       #7, D7
+                MOVE.W      D7, ImmOrReg
 *-------------
                 
 *-------------      store type
@@ -1112,12 +1115,17 @@ OpCodeDir       DS.W    1
 OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1
 
+OpCodeDirection DS.W    1
+
+
 Mode            DS.W    1 *no need to duplicate only focus on source or destination at one time, not both.
 Reg             DS.W    1 ************
 
 EAword          DS.W    1
 EAlong          DS.L    1
 
+
+ImmOrReg        DS.W    1
 ImmDataSize     DS.B    1
 ImmData         DS.L    1
 
