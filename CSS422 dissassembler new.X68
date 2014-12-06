@@ -42,7 +42,7 @@ START:
         TRAP    #15             *display A1
         
         LEA     ENDPT, A1       
-        MOVE.B  #2, D0          *
+        MOVE.B  #2, D0
         TRAP    #15
         
         JSR     setCharToHex
@@ -58,8 +58,11 @@ START:
         CLR.L   D1
         MOVE.W  #0, lineNumber
         MOVE.L      STARTPT, A5
-*Get word  element
-MainLoop            
+        
+        CLR.B   NumDisplayed
+        
+MainLoop    *Get word  element
+            JSR         CheckNumDisplayed
             CMPA.L      ENDPT, A5
             BEQ         DONE         
             ADDI.W      #1, lineNumber
@@ -68,26 +71,40 @@ MainLoop
             JSR         displaySpace
             MOVE.B      #8, hexlength
             MOVE.L      lineAddress, D4
-            CLR.B         counter
+            CLR.B       counter
             JSR         hexDecode
             JSR         displaySpace
             MOVE.W      (A5)+,D6     *variable put in place
             MOVE.W      D6, fullOpcode
 *            MOVE.W      #example, D6        
             MOVE.W      D6, D0
-            MOVE.B      #shift12,D1       *Shift 12 bits to the right  
-            LSR.W       D1,D0           *Move the bits
-            MULU        #6,D0       *Form offset     
+            MOVE.B      #shift12,D1         *Shift 12 bits to the right  
+            LSR.W       D1,D0               *Move the bits
+            MULU        #6,D0               *Form offset     
 
-            JSR         0(A0,D0)    *Jump indirect with index
+            JSR         0(A0,D0)            *Jump indirect with index
+            
 ContinueMain
-*            JSR         display
+            *JSR         display
             MOVE.B      #$00, (A6)+
             JSR         displayOutput
-            BRA         MainLoop    
-* check read pointer location against EnDPt if end done
-* otherwise move back into read sub routine
-                    
+            ADD.B       #1,     NumDisplayed
+            BRA         MainLoop
+            
+            * check read pointer location against EnDPt if end done
+            * otherwise move back into read sub routine
+
+CheckNumDisplayed
+            CMP.B       #10,            NumDisplayed
+            BLT         Continue
+            LEA         AskToContinue,  A1
+            MOVE.B      #13,            D0
+            TRAP        #15
+            MOVE.B      #5,             D0
+            TRAP        #15
+            CLR.B       NumDisplayed
+Continue    RTS
+            
 
 *----------------------------------------------------------------
 *                       OpCode ID Table                         |
@@ -170,7 +187,7 @@ code1100       STOP        #$2700
                BRA        continueMain
 
 
-code1101       STOP        #$2700
+code1101       STOP        AddGroup
                BRA        continueMain
 
 code1110       BRA         BitShiftGroup
@@ -201,24 +218,32 @@ GroupZeroType
                 MOVE.B      #14,D1
                 LSR.W       D1, D5
                 MOVE.W      D5, OpCodeSize
-*-----------Mode--------------------------------------
+*-----------Src Mode--------------------------------------
+                MOVE.W      D6, D2
+                LSL.W       #4, D2
+                MOVE.B      #13, D1
+                LSR.W       D1, D2
+                MOVE.W      D2, RegOrCount
+*-----------Des Mode--------------------------------------
                 MOVE.W      D6, D2
                 MOVE.B      #10, D1
                 LSL.W       D1, D2
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
+                MOVE.W      D2, Mode
                 
-                *which mode source or destination
+              
 
 *-----------Register Number-------------------
                 MOVE.W      D6, D3
                 MOVE.B      #13, D1
                 LSL.W       D1,D3
                 LSR.W       D1,D3
+                MOVE.W      D3, Reg
 
 *-------------Identifier set------------------                
                 MOVE.W      D6, D0
-                LSL.W       #8, D0  *isolate most significant eight bits for ID
+                LSR.W       #8, D0
                 BRA         GroupZeroCompare
 
 GroupZeroCompare
@@ -233,20 +258,67 @@ GroupZeroCompare
 
 
 ORIopCode
-*                JSR         disORIopCode
+                JSR         outORI
                 JSR         printSize
-                JSR         disImmData
+                JSR         getImmDataFromOpCodeSize
+                JSR         displayComma
+                JSR         displaySpace
+                MOVE.W      Mode, D2
+                MOVE.W      Reg, D3
+                JSR         modeCompare
+                RTS
        
 
 BTSTopCode
-                
+                JSR         outBTST
+                JSR         displaySpace
+                JSR         checkImmOrReg                
+                JSR         displayComma
+                JSR         displaySpace
+                MOVE.W      Mode, D2
+                MOVE.W      Reg, D3
+                JSR         ModeCompare
+                RTS    
 
 CMPIopCode
+                JSR         outCMPI
+                JSR         printSize
+                JSR         getImmDataFromOpCodeSize
+                JSR         displayComma
+                JSR         displaySpace
+                MOVE.W      Mode, D2
+                MOVE.W      Reg, D3
+                JSR         modeCompare
+                RTS                
 
 EORIopCode
+                JSR         outEORI
+                JSR         printSize
+                JSR         getImmDataFromOpCodeSize
+                JSR         displayComma
+                JSR         displaySpace
+                MOVE.W      Mode, D2
+                MOVE.W      Reg, D3
+                JSR         modeCompare
+                RTS 
 
+checkImmOrReg
+                MOVE.W      RegOrCount, D1
+                CMPI.W      #4, D1
+                BEQ         getImmDataFromOpCodeSize
+                MOVE.W      RegOrCount, D3
+                BNE         disDataReg
 
-
+getImmDataFromOpCodeSize
+                JSR         printHash
+                MOVE.W      opCodeSize, D1
+                CMPI.W      #0, D1
+                BEQ         getByte
+                CMPI.W      #1, D1
+                BEQ         getWord
+                CMPI.W      #2, D1
+                BEQ         getLong
+                RTS
                                 
 
 *--------------MOVE.B Decode-----------------------------
@@ -359,8 +431,80 @@ MoveDesModeDecode
                 RTS
 
 
+*--------------Add Group Decode-----------------------------
+AddGroup            BRA     addGroupType
+
+addGroupType    
+                CLR.L         D0
+                CLR.L         D1
+                CLR.L         D2  *    
+                CLR.L         D3  *
+                CLR.L         D4  *will store direction of opcode
+                CLR.L         D5  *size
+                CLR.L         D7  *i/r
+                
+*------------       Source Reg direction bit                       
+                
+                MOVE.W        D6, D0
+                LSL.W         #4, D0
+                MOVE.W        #13, D1
+                LSR.W         D1, D0
+                MOVE.W        D0, RegOrCount
+*------------      store Size bit
+                MOVE.W        D6, D0
+                LSL.W         #8, D0
+                MOVE.W        #14, D1
+                LSR.W         D1, D0
+                MOVE.W        D0, opCodeSize
+*------------      store Size bit
+          
+                
+*------------       Source Mode direction bit
+                MOVE.W        D6, D0
+                LSL.W         #7, D0
+                MOVE.W        #13, D1
+                LSR.W         D1, D0
+                MOVE.W        D0, OpMode
+
+*------------       Des Mode direction bit 
+                MOVE.W        D6, D0
+                MOVE.W        #10, D1
+                LSL.W         D1, D0
+                MOVE.W        #13, D1
+                LSR.W         D1, D0
+                MOVE.W        D0, Mode
+
+*------------       Des Reg direction bit 
+                MOVE.W        D6, D0
+                MOVE.W        #13, D1
+                LSL.W         D1, D0
+                LSR.W         D1, D0
+                MOVE.W        D0, Reg
+                JSR           checkAddType
+                BRA           AddprintRest
+           
+*------------      analyzeType
+checkAddType
+                CMPI.W        #%11, opCodeSize
+                BEQ           addAType
+                BNE           addType
+
+addAType
+                JSR           outAddA
+                RTS
+
+addType
+                JSR           outAdd
+                RTS
+
+                
+AddprintRest
+                JSR              printSize 
+                
 
 
+
+                
 
 
 *--------------BitShiftingGroup Decode-----------------------------
@@ -396,7 +540,7 @@ bitShiftType
                 LSL.W       #4, D2
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
-                MOVE.W      D2, ShiftRegOrCount
+                MOVE.W      D2, RegOrCount
 *-------------      store DesMode
                 MOVE.W      D6, D2
                 MOVE.W      #10, D1
@@ -469,7 +613,7 @@ RotShiftGroup
 *--------BIT SHifting helper functions---------   
 printShiftFront
                 CLR.L       D1
-                MOVE.W      ShiftRegOrCount, D1
+                MOVE.W      RegOrCount, D1
                 MOVE.B      #1, D2
                 CMP.W       ImmOrReg, D2
                 BEQ         printShiftRegister
@@ -488,7 +632,7 @@ printShiftBack
 ShiftCheckEA
                 CLR.L       D1         
                 MOVE.W      #1, D1
-                CMP.W       ShiftRegOrCount, D1
+                CMP.W       RegOrCount, D1
                 BEQ         printShiftMode
                 MOVE.W      Reg, D1
                 BNE         printShiftRegister
@@ -496,7 +640,7 @@ printShiftImm
                 CLR.L       D1
                 JSR         printHash
                 JSR         printDollar
-                MOVE.W      ShiftRegOrCount, D1
+                MOVE.W      RegOrCount, D1
                 JSR         printShiftXn
                 RTS
                                 
@@ -538,23 +682,6 @@ printShiftMode  *can only be an effective address
                      
 
 *-------------Helper Functions-----------     
-printDirection
-                CMPI.B      #0, D4
-                BEQ         outDirectionR
-                BNE         outDirectionL
-
-
-printSize
-                CMPI.B      #0, D5
-                BEQ         outSizeByte
-                CMPI.B      #1, D5
-                BEQ         outSizeWord
-                CMPI.B      #2, D5
-                BEQ         outSizeLong
-                BNE         disError
-                
-                RTS
-
 
 
 *----------------------------------------------------------------
@@ -641,6 +768,26 @@ GetLong
                 CLR.B     counter
                 JSR     HexDecode
                 RTS
+
+*----------------------------------------------
+printDirection
+                CMPI.B      #0, D4
+                BEQ         outDirectionR
+                BNE         outDirectionL
+
+
+printSize
+                CMPI.B      #0, D5
+                BEQ         outSizeByte
+                CMPI.B      #1, D5
+                BEQ         outSizeWord
+                CMPI.B      #2, D5
+                BEQ         outSizeLong
+                BNE         disError
+                
+                RTS
+
+
                 
 *----------------------------------------------
 
@@ -887,6 +1034,18 @@ outMoveM
                 JSR         outMove
                 MOVE.B      #$4D, (A6)+
                 RTS
+
+outAdd          
+                MOVE.B      #$41, (A6)+
+                MOVE.B      #$44, (A6)+
+                MOVE.B      #$44, (A6)+
+                RTS
+                
+outAddA
+                JSR         outAdd
+                MOVE.B      #$41, (A6)+
+                RTS
+
 
 outSub 
                 MOVE.B      #$53, (A6)+
@@ -1176,6 +1335,7 @@ DONE
 Error           DC.B    'error', 0
 ASKStart        DC.B    'Starting Location: ',0
 ASKEnd          DC.B    'Ending Location: ',0
+AskToContinue   DC.B    'Hit any key to continue',0
 
 counter         DS.B    1
 hexlength       DS.B    1
@@ -1195,8 +1355,8 @@ OpCodeDirection DS.W    1
 
 Mode            DS.W    1 *no need to duplicate only focus on source or destination at one time, not both.
 Reg             DS.W    1 ************
-ShiftRegOrCount DS.W    1
-
+RegOrCount      DS.W    1
+OpMode          DS.W    1
 
 
 EAword          DS.W    1
@@ -1211,9 +1371,12 @@ STARTPT         DS.L    1
 ENDPT           DS.L    1
 
 Output          DS.L    10
+
+NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
 
 
 

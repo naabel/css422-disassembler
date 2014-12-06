@@ -262,19 +262,11 @@ START:                  ; first instruction of program
 *        AND.W  D0, (A3)+
 *        AND.W  D0, -(A3)
 *        
-*		 ORI.W  D0, D3
-*        ORI.W  (A0),D3
-*        ORI.W  (A0)+,D3
-*        ORI.W  -(A0),D3
-*        ORI.W  #2, D3
-*        ORI.W  $3333, D3
-*        ORI.W  $44444444, D3
-*        ORI.W  D0, $3333
-*        ORI.W  D0, $44444444
-*        ORI.W  D0, A3
-*        ORI.W  D0,    (A3)
-*        ORI.W  D0, (A3)+
-*        ORI.W  D0, -(A3)
+
+        ORI.W  #2, D3
+        ORI.B  #2, D3
+        ORI.L  #2, D3
+
 *        
 *		 NEG.W  D0, D3
 *        NEG.W  (A0),D3
@@ -304,19 +296,11 @@ START:                  ; first instruction of program
 *        EOR.W  D0, (A3)+
 *        EOR.W  D0, -(A3)
 *        
-*		 EORI.W  D0, D3
-*        EORI.W  (A0),D3
-*        EORI.W  (A0)+,D3
-*        EORI.W  -(A0),D3
-*        EORI.W  #2, D3
-*        EORI.W  $3333, D3
-*        EORI.W  $44444444, D3
-*        EORI.W  D0, $3333
-*        EORI.W  D0, $44444444
-*        EORI.W  D0, A3
-*        EORI.W  D0,    (A3)
-*        EORI.W  D0, (A3)+
-*        EORI.W  D0, -(A3)
+
+        EORI.W  #2, D3
+        EORI.B  #2, D3
+        EORI.L  #2, D3
+
 *        
 *		 NOT.W  D0, D3
 *        NOT.W  (A0),D3
@@ -332,37 +316,43 @@ START:                  ; first instruction of program
 *        NOT.W  D0, (A3)+
 *        NOT.W  D0, -(A3)
 *        
-		 LSR.W  D0, D3
-        LSR.W  #2, D3
-        
-		 LSL.W  D0, D3
-        LSL.W  #2, D3
-        
-		 ASR.W  D0, D3
-        ASR.W  #2, D3
-        
-		 ASL.W  D0, D3
-        ASL.W  #2, D3
-        
-		 ROL.W  D0, D3
-        ROL.W  #2, D3
-        
-		 ROR.W  D0, D3
-        ROR.W  #2, D3
+*		 LSR.W  D0, D3
+*        LSR.W  #2, D3
 *        
-*		 BTST.W  D0, D3
-*        BTST.W  (A0),D3
-*        BTST.W  (A0)+,D3
-*        BTST.W  -(A0),D3
-*        BTST.W  #2, D3
-*        BTST.W  $3333, D3
-*        BTST.W  $44444444, D3
-*        BTST.W  D0, $3333
-*        BTST.W  D0, $44444444
-*        BTST.W  D0, A3
-*        BTST.W  D0,    (A3)
-*        BTST.W  D0, (A3)+
-*        BTST.W  D0, -(A3)
+*		 LSL.W  D0, D3
+*        LSL.W  #2, D3
+*        
+*		 ASR.W  D0, D3
+*        ASR.W  #2, D3
+*        
+*		 ASL.W  D0, D3
+*        ASL.W  #2, D3
+*        
+*		 ROL.W  D0, D3
+*        ROL.W  #2, D3
+*        
+*		 ROR.W  D0, D3
+*        ROR.W  #2, D3
+*        
+
+        BTST  #2, D3
+
+
+*        BTST.B  D0, $3333
+*        BTST.B  D0, $44444444
+*
+*        BTST.B  D0,    (A3)
+*        BTST.B  D0, (A3)+
+*        BTST.B  D0, -(A3)
+*        
+*
+*
+*        BTST  D0, $3333
+*        BTST  D0, $44444444
+*
+*        BTST  D0,  (A3)
+*        BTST  D0, (A3)+
+*        BTST  D0, -(A3)
 *        
 *		 CMP.W  D0, D3
 *        CMP.W  (A0),D3
@@ -378,19 +368,11 @@ START:                  ; first instruction of program
 *        CMP.W  D0, (A3)+
 *        CMP.W  D0, -(A3)
 *        
-*		 CMPI.W  D0, D3
-*        CMPI.W  (A0),D3
-*        CMPI.W  (A0)+,D3
-*        CMPI.W  -(A0),D3
-*        CMPI.W  #2, D3
-*        CMPI.W  $3333, D3
-*        CMPI.W  $44444444, D3
-*        CMPI.W  D0, $3333
-*        CMPI.W  D0, $44444444
-*        CMPI.W  D0, A3
-*        CMPI.W  D0,    (A3)
-*        CMPI.W  D0, (A3)+
-*        CMPI.W  D0, -(A3)
+
+
+        CMPI.W  #2, D3
+        CMPI.B  #2, D3
+        CMPI.L  #2, D3
 *        
 *		 CMPA.W  D0, D3
 *        CMPA.W  (A0),D3
@@ -511,6 +493,7 @@ START:                  ; first instruction of program
 * Put variables and constants here
 
     END    START        ; last line of source
+
 
 
 
