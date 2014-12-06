@@ -95,7 +95,7 @@ ContinueMain
             * otherwise move back into read sub routine
 
 CheckNumDisplayed
-            CMP.B       #10,            NumDisplayed
+            CMP.B       #25,            NumDisplayed
             BLT         Continue
             LEA         AskToContinue,  A1
             MOVE.B      #13,            D0
@@ -187,7 +187,7 @@ code1100       STOP        #$2700
                BRA        continueMain
 
 
-code1101       STOP        AddGroup
+code1101       BRA        AddGroup
                BRA        continueMain
 
 code1110       BRA         BitShiftGroup
@@ -204,14 +204,14 @@ code1111       STOP        #$2700
 
 GroupZero       BRA        GroupZeroType
 
-GroupZeroType   
-                CLR.L         D0
-                CLR.L         D1  *temp variables
-                CLR.L         D2  *Mode    
-                CLR.L         D3  *Number
-                CLR.L         D4  *Memory increment save
-                CLR.L         D5  *size
-                CLR.L         D7  *
+GroupZeroType   RTS         ClearAll
+*                CLR.L         D0
+*                CLR.L         D1  *temp variables
+*                CLR.L         D2  *Mode    
+*                CLR.L         D3  *Number
+*                CLR.L         D4  *Memory increment save
+*                CLR.L         D5  *size
+*                CLR.L         D7  *
 *----------- store size-------------------------------
                 MOVE.W      D6, D5
                 LSL.W       #8, D5
@@ -231,6 +231,28 @@ GroupZeroType
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
                 MOVE.W      D2, Mode
+                
+GroupSevenType  RTS         ClearAll
+
+*-----------Get Condition
+                CLR.B       OpCodeCondition
+                MOVE.W      D6, D5
+                LSL.W       #4, D5
+                MOVE.B      #12,    D1   
+                LSR.W       D1,     D5
+                MOVE.B      D5, OpCodeCondition
+                
+*-----------Get Displacement
+                CLR.B       OpCodeDisplacement
+                MOVE.W      D6, D2
+                LSL.W       #8, D2
+                LSR.W       #8, D2
+                MOVE.B      D2, OpCodeDisplacement
+
+*Compare Displacement Against $00
+*BEQ    
+                
+                
                 
               
 
@@ -1324,6 +1346,15 @@ displayOutput
 DONE
 *        BRA         START
 
+*-----------Helper Functions-------
+ClearAll        CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
+                RTS
     
 
          
@@ -1346,6 +1377,9 @@ lineNumber      DS.W    1
 fullOpcode      DS.W    1
 OpCodeNib       DS.W    1
 OpCodeDir       DS.W    1
+
+OpCodeCondition     DS.B    1
+OpCodeDisplacement  DS.B    1
 
 OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1
@@ -1376,6 +1410,7 @@ NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
 
 
 
