@@ -95,7 +95,7 @@ ContinueMain
             * otherwise move back into read sub routine
 
 CheckNumDisplayed
-            CMP.B       #25,            NumDisplayed
+            CMP.B       #10,            NumDisplayed
             BLT         Continue
             LEA         AskToContinue,  A1
             MOVE.B      #13,            D0
@@ -187,10 +187,10 @@ code1100       STOP        #$2700
                BRA        continueMain
 
 
-code1101       BRA        AddGroup
+code1101       JSR        AddGroup
                BRA        continueMain
 
-code1110       BRA         BitShiftGroup
+code1110       JSR        BitShiftGroup
                BRA        continueMain
 
 code1111       STOP        #$2700
@@ -204,14 +204,14 @@ code1111       STOP        #$2700
 
 GroupZero       BRA        GroupZeroType
 
-GroupZeroType   RTS         ClearAll
-*                CLR.L         D0
-*                CLR.L         D1  *temp variables
-*                CLR.L         D2  *Mode    
-*                CLR.L         D3  *Number
-*                CLR.L         D4  *Memory increment save
-*                CLR.L         D5  *size
-*                CLR.L         D7  *
+GroupZeroType   
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
 *----------- store size-------------------------------
                 MOVE.W      D6, D5
                 LSL.W       #8, D5
@@ -231,28 +231,6 @@ GroupZeroType   RTS         ClearAll
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
                 MOVE.W      D2, Mode
-                
-GroupSevenType  RTS         ClearAll
-
-*-----------Get Condition
-                CLR.B       OpCodeCondition
-                MOVE.W      D6, D5
-                LSL.W       #4, D5
-                MOVE.B      #12,    D1   
-                LSR.W       D1,     D5
-                MOVE.B      D5, OpCodeCondition
-                
-*-----------Get Displacement
-                CLR.B       OpCodeDisplacement
-                MOVE.W      D6, D2
-                LSL.W       #8, D2
-                LSR.W       #8, D2
-                MOVE.B      D2, OpCodeDisplacement
-
-*Compare Displacement Against $00
-*BEQ    
-                
-                
                 
               
 
@@ -414,6 +392,8 @@ MoveSrcModeDecode
                 LSR.W   #3, D0   *D2 now has the mode
                 MOVE.W  D0, D2
                 MOVE.W  D2, Mode
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
                 JSR     ModeCompare
                 RTS    
 
@@ -449,6 +429,8 @@ MoveDesModeDecode
                 LSR.W   D1, D0       *mode isolated
                 MOVE.W  D0, D2
                 MOVE.W  D2, Mode
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
                 JSR     ModeCompare
                 RTS
 
@@ -465,43 +447,48 @@ addGroupType
                 CLR.L         D5  *size
                 CLR.L         D7  *i/r
                 
-*------------       Source Reg direction bit                       
+*------------       Des Reg direction bit                       
                 
                 MOVE.W        D6, D0
                 LSL.W         #4, D0
                 MOVE.W        #13, D1
                 LSR.W         D1, D0
-                MOVE.W        D0, RegOrCount
+                MOVE.W        D0, Reg
 *------------      store Size bit
                 MOVE.W        D6, D0
                 LSL.W         #8, D0
                 MOVE.W        #14, D1
                 LSR.W         D1, D0
                 MOVE.W        D0, opCodeSize
-*------------      store Size bit
-          
-                
-*------------       Source Mode direction bit
+*------------      store Size bit in bit size variable for add A
                 MOVE.W        D6, D0
                 LSL.W         #7, D0
-                MOVE.W        #13, D1
+                MOVE.W        #15, D1
                 LSR.W         D1, D0
-                MOVE.W        D0, OpMode
-
-*------------       Des Mode direction bit 
+                MOVE.W        D0, bitsOfSize                
+          
+                
+*------------       Des Mode direction bit
                 MOVE.W        D6, D0
-                MOVE.W        #10, D1
-                LSL.W         D1, D0
+                LSL.W         #7, D0
                 MOVE.W        #13, D1
                 LSR.W         D1, D0
                 MOVE.W        D0, Mode
 
 *------------       Des Reg direction bit 
                 MOVE.W        D6, D0
+                MOVE.W        #10, D1
+                LSL.W         D1, D0
+                MOVE.W        #13, D1
+                LSR.W         D1, D0
+                MOVE.W        D0, OpMode
+
+*------------       Des Reg direction bit 
+                MOVE.W        D6, D0
                 MOVE.W        #13, D1
                 LSL.W         D1, D0
                 LSR.W         D1, D0
-                MOVE.W        D0, Reg
+                MOVE.W        D0, RegOrCount
                 JSR           checkAddType
                 BRA           AddprintRest
            
@@ -513,6 +500,7 @@ checkAddType
 
 addAType
                 JSR           outAddA
+                MOVE.W        bitsOfSize, OpCodeSize       
                 RTS
 
 addType
@@ -521,7 +509,18 @@ addType
 
                 
 AddprintRest
-                JSR              printSize 
+                MOVE.W           OpCodeSize, D5
+                JSR              printSize
+                MOVE.W           RegOrCount, D3
+                MOVE.W           OpMode, D2
+                JSR              ModeCompare
+                JSR              displayComma
+                JSR              displaySpace
+                MOVE.W           Reg, D3
+                MOVE.W           Mode, D2
+                JSR              ModeCompare
+                RTS   
+                 
                 
 
 
@@ -714,7 +713,6 @@ printShiftMode  *can only be an effective address
 *------------------Mode Comparisons -----------------------------------------
 
 ModeCompare     
-                MOVE.W  Mode, D2
                 CMPI.B  #%000, D2 * last three are zeroes
                 BEQ     disDataRegMode       *jump to subroutine for Data register Source
                 BNE     ModeCompare1              *FIXME: needs to have not equal Branch here
@@ -748,16 +746,17 @@ ModeCompare5    CMPI.B  #%111, D2
 **--<EA> Mode Register
 *
 EACompare       
-                MOVE.W  Reg, D3
                 CMPI.B  #%000,  D3
                 BEQ     GetWord
                 BNE     EACompare1
                 
-EACompare1      CMPI.B  #%001,  D3
+EACompare1      
+                CMPI.B  #%001,  D3
                 BEQ     GetLong
                 BNE     EACompareData
                 
-EACompareData   CMPI.B  #%100,  D3
+EACompareData   
+                CMPI.B  #%100,  D3
                 BEQ     ImmDataScan
                 BNE     disError
                 
@@ -766,8 +765,8 @@ EACompareData   CMPI.B  #%100,  D3
 GetByte
                 JSR     printDollar
                 MOVE.W  (A5)+,  D4
-                MOVE.B  #2,     hexLength *iterations of nibbles to take
-                CLR.B     counter     *before you call hex decode zero conter
+                MOVE.B  #2,     hexLength   *iterations of nibbles to take
+                CLR.B     counter           *before you call hex decode zero conter
                 MOVE.B  #24, D2
                 LSL.L   D2, D4
                 JSR     HexDecode
@@ -1346,15 +1345,6 @@ displayOutput
 DONE
 *        BRA         START
 
-*-----------Helper Functions-------
-ClearAll        CLR.L         D0
-                CLR.L         D1  *temp variables
-                CLR.L         D2  *Mode    
-                CLR.L         D3  *Number
-                CLR.L         D4  *Memory increment save
-                CLR.L         D5  *size
-                CLR.L         D7  *
-                RTS
     
 
          
@@ -1377,9 +1367,6 @@ lineNumber      DS.W    1
 fullOpcode      DS.W    1
 OpCodeNib       DS.W    1
 OpCodeDir       DS.W    1
-
-OpCodeCondition     DS.B    1
-OpCodeDisplacement  DS.B    1
 
 OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1

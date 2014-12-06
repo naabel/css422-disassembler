@@ -9,67 +9,67 @@
     
 START:                  ; first instruction of program
 
-*        MOVE.B  D0, D3
-*        MOVE.B  (A0),D3
-*        MOVE.B  (A0)+,D3
-*        MOVE.B  -(A0),D3
-*        MOVE.B  #2, D3
-*        MOVE.B  $3333, D3
-*        MOVE.B  $44444444, D3
-*        MOVE.B  D0, $3333
-*        MOVE.B  D0, $44444444
-*        MOVE.B  D0, (A3)
-*        MOVE.B  D0, (A3)+
-*        MOVE.B  D0, -(A3)
-*        
-*        MOVE.W  D0, D3
-*        MOVE.W  (A0),D3
-*        MOVE.W  (A0)+,D3
-*        MOVE.W  -(A0),D3
-*        MOVE.W  #2, D3
-*        MOVE.W  $3333, D3
-*        MOVE.W  $44444444, D3
-*        MOVE.W  D0, $3333
-*        MOVE.W  D0, $44444444
-*        MOVE.W  D0, A3
-*        MOVE.W  D0,    (A3)
-*        MOVE.W  D0, (A3)+
-*        MOVE.W  D0, -(A3)
-*        
-*        MOVE.L  D0, D3
-*        MOVE.L  (A0),D3
-*        MOVE.L  (A0)+,D3
-*        MOVE.L  -(A0),D3
-*        MOVE.L  $3333, D3
-*        MOVE.L  $44444444, D3
-*        MOVE.L  D0, $3333
-*        MOVE.L  D0, $44444444
-*        MOVE.L  D0, A3
-*        MOVE.L  D0,    (A3)
-*        MOVE.L  D0, (A3)+
-*        MOVE.L  D0, -(A3)    
-*        
-*        MOVEA.W     A0,   A3
-*        MOVEA.W     (A0), A3
-*        MOVEA.W     (A0)+,A3
-*        MOVEA.W     -(A0),A3
-*        MOVEA.W     #2,   A3
-*        MOVEA.W     $3333,A3
-*        MOVEA.W     $44444444, A3
-*        MOVEA.W     A0, A3
-*        MOVEA.W     D0, A3
-*        MOVEA.W     D0, A3 
-*        
-*        MOVEA.L     A0,   A3
-*        MOVEA.L     (A0), A3
-*        MOVEA.L     (A0)+,A3
-*        MOVEA.L     -(A0),A3
-*        MOVEA.L     #2,   A3
-*        MOVEA.L     $3333,A3
-*        MOVEA.L     $44444444, A3
-*        MOVEA.L     A0, A3
-*        MOVEA.L     D0, A3
-*        MOVEA.L     D0, A3 
+        MOVE.B  D0, D3
+        MOVE.B  (A0),D3
+        MOVE.B  (A0)+,D3
+        MOVE.B  -(A0),D3
+        MOVE.B  #2, D3
+        MOVE.B  $3333, D3
+        MOVE.B  $44444444, D3
+        MOVE.B  D0, $3333
+        MOVE.B  D0, $44444444
+        MOVE.B  D0, (A3)
+        MOVE.B  D0, (A3)+
+        MOVE.B  D0, -(A3)
+        
+        MOVE.W  D0, D3
+        MOVE.W  (A0),D3
+        MOVE.W  (A0)+,D3
+        MOVE.W  -(A0),D3
+        MOVE.W  #2, D3
+        MOVE.W  $3333, D3
+        MOVE.W  $44444444, D3
+        MOVE.W  D0, $3333
+        MOVE.W  D0, $44444444
+        MOVE.W  D0, A3
+        MOVE.W  D0,    (A3)
+        MOVE.W  D0, (A3)+
+        MOVE.W  D0, -(A3)
+        
+        MOVE.L  D0, D3
+        MOVE.L  (A0),D3
+        MOVE.L  (A0)+,D3
+        MOVE.L  -(A0),D3
+        MOVE.L  $3333, D3
+        MOVE.L  $44444444, D3
+        MOVE.L  D0, $3333
+        MOVE.L  D0, $44444444
+        MOVE.L  D0, A3
+        MOVE.L  D0,    (A3)
+        MOVE.L  D0, (A3)+
+        MOVE.L  D0, -(A3)    
+        
+        MOVEA.W     A0,   A3
+        MOVEA.W     (A0), A3
+        MOVEA.W     (A0)+,A3
+        MOVEA.W     -(A0),A3
+        MOVEA.W     #2,   A3
+        MOVEA.W     $3333,A3
+        MOVEA.W     $44444444, A3
+        MOVEA.W     A0, A3
+        MOVEA.W     D0, A3
+        MOVEA.W     D0, A3 
+        
+        MOVEA.L     A0,   A3
+        MOVEA.L     (A0), A3
+        MOVEA.L     (A0)+,A3
+        MOVEA.L     -(A0),A3
+        MOVEA.L     #2,   A3
+        MOVEA.L     $3333,A3
+        MOVEA.L     $44444444, A3
+        MOVEA.L     A0, A3
+        MOVEA.L     D0, A3
+        MOVEA.L     D0, A3 
 
 *        MOVEM.W  D0/D1, (A3)
 *        MOVEM.W     D0/D1,  -(A3)
@@ -88,6 +88,21 @@ START:                  ; first instruction of program
 *        MOVEM.L  (A0)+,D3/D4
 *        MOVEM.L  $3333, D3
 *        MOVEM.L  $44444444, D3
+
+        ADD.B  D0, D3
+        ADD.B  (A0),D3
+        ADD.B  (A0)+,D3
+        ADD.B  -(A0),D3
+        ADD.B  $3333, D3
+        ADD.B  $44444444, D3
+        ADD.B  D0, $3333
+        ADD.B  D0, $44444444
+        ADD.B  D0,    (A3)
+        ADD.B  D0, (A3)+
+        ADD.B  D0, -(A3)
+
+
+        ADDA  D0, A3
         
 *        ADDQ.B  D0, D3
 *        ADDQ.B  (A0),D3
@@ -316,23 +331,23 @@ START:                  ; first instruction of program
 *        NOT.W  D0, (A3)+
 *        NOT.W  D0, -(A3)
 *        
-*		 LSR.W  D0, D3
-*        LSR.W  #2, D3
-*        
-*		 LSL.W  D0, D3
-*        LSL.W  #2, D3
-*        
-*		 ASR.W  D0, D3
-*        ASR.W  #2, D3
-*        
-*		 ASL.W  D0, D3
-*        ASL.W  #2, D3
-*        
-*		 ROL.W  D0, D3
-*        ROL.W  #2, D3
-*        
-*		 ROR.W  D0, D3
-*        ROR.W  #2, D3
+		 LSR.W  D0, D3
+        LSR.W  #2, D3
+        
+		 LSL.W  D0, D3
+        LSL.W  #2, D3
+        
+		 ASR.W  D0, D3
+        ASR.W  #2, D3
+        
+		 ASL.W  D0, D3
+        ASL.W  #2, D3
+        
+		 ROL.W  D0, D3
+        ROL.W  #2, D3
+        
+		 ROR.W  D0, D3
+        ROR.W  #2, D3
 *        
 
         BTST  #2, D3
@@ -493,6 +508,7 @@ START:                  ; first instruction of program
 * Put variables and constants here
 
     END    START        ; last line of source
+
 
 
 
