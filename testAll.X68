@@ -71,23 +71,23 @@ START:                  ; first instruction of program
         MOVEA.L     D0, A3
         MOVEA.L     D0, A3 
 
-*        MOVEM.W  D0/D1, (A3)
-*        MOVEM.W     D0/D1,  -(A3)
-*        MOVEM.W  D0/D1, $3333
-*        MOVEM.W  D0/D1, $44444444
-*        MOVEM.W  (A0),D3/D4
-*        MOVEM.W  (A0)+,D3/D4
-*        MOVEM.W  $3333, D3
-*        MOVEM.W  $44444444, D3
-*        
-*        MOVEM.L  D0/D1, (A3)
-*        MOVEM.L     D0/D1,  -(A3)
-*        MOVEM.L  D0/D1, $3333
-*        MOVEM.L  D0/D1, $44444444
-*        MOVEM.L  (A0),D3/D4
-*        MOVEM.L  (A0)+,D3/D4
-*        MOVEM.L  $3333, D3
-*        MOVEM.L  $44444444, D3
+        MOVEM.W  D0/D1, (A3)
+        MOVEM.W     D0/D1,  -(A3)
+        MOVEM.W  D0/D1, $3333
+        MOVEM.W  D0/D1, $44444444
+        MOVEM.W  (A0),D3/D4
+        MOVEM.W  (A0)+,D3/D4
+        MOVEM.W  $3333, D3
+        MOVEM.W  $44444444, D3
+        
+        MOVEM.L  D0/D1, (A3)
+        MOVEM.L     D0/D1,  -(A3)
+        MOVEM.L  D0/D1, $3333
+        MOVEM.L  D0/D1, $44444444
+        MOVEM.L  (A0),D3/D4
+        MOVEM.L  (A0)+,D3/D4
+        MOVEM.L  $3333, D3
+        MOVEM.L  $44444444, D3
 
         ADD.B  D0, D3
         ADD.B  (A0),D3
@@ -249,19 +249,10 @@ START:                  ; first instruction of program
 *        DIVS.W  D0, (A3)+
 *        DIVS.W  D0, -(A3)
 *        
-*		 LEA.W  D0, D3
-*        LEA.W  (A0),D3
-*        LEA.W  (A0)+,D3
-*        LEA.W  -(A0),D3
-*        LEA.W  #2, D3
-*        LEA.W  $3333, D3
-*        LEA.W  $44444444, D3
-*        LEA.W  D0, $3333
-*        LEA.W  D0, $44444444
-*        LEA.W  D0, A3
-*        LEA.W  D0,    (A3)
-*        LEA.W  D0, (A3)+
-*        LEA.W  D0, -(A3)
+
+        LEA      $3333, A1
+        LEA      $44444444, A3
+
 *        
 *		 AND.W  D0, D3
 *        AND.W  (A0),D3
@@ -281,21 +272,27 @@ START:                  ; first instruction of program
         ORI.W  #2, D3
         ORI.B  #2, D3
         ORI.L  #2, D3
+        
+		NEG.W  D0
+        NEG.W  (A0)
+        NEG.W  (A0)+
+        NEG.W  -(A0)
+        NEG.W  $3333
+        NEG.W  $44444444
 
-*        
-*		 NEG.W  D0, D3
-*        NEG.W  (A0),D3
-*        NEG.W  (A0)+,D3
-*        NEG.W  -(A0),D3
-*        NEG.W  #2, D3
-*        NEG.W  $3333, D3
-*        NEG.W  $44444444, D3
-*        NEG.W  D0, $3333
-*        NEG.W  D0, $44444444
-*        NEG.W  D0, A3
-*        NEG.W  D0,    (A3)
-*        NEG.W  D0, (A3)+
-*        NEG.W  D0, -(A3)
+		NEG.B  D0
+        NEG.B  (A0)
+        NEG.B  (A0)+
+        NEG.B  -(A0)
+        NEG.B  $3333
+        NEG.B  $44444444
+        
+		NEG.L  D0
+        NEG.L  (A0)
+        NEG.L  (A0)+
+        NEG.L  -(A0)
+        NEG.L  $3333
+        NEG.L  $44444444
 *        
 *		 EOR.W  D0, D3
 *        EOR.W  (A0),D3
@@ -317,37 +314,65 @@ START:                  ; first instruction of program
         EORI.L  #2, D3
 
 *        
-*		 NOT.W  D0, D3
-*        NOT.W  (A0),D3
-*        NOT.W  (A0)+,D3
-*        NOT.W  -(A0),D3
-*        NOT.W  #2, D3
-*        NOT.W  $3333, D3
-*        NOT.W  $44444444, D3
-*        NOT.W  D0, $3333
-*        NOT.W  D0, $44444444
-*        NOT.W  D0, A3
-*        NOT.W  D0,    (A3)
-*        NOT.W  D0, (A3)+
-*        NOT.W  D0, -(A3)
-*        
-		 LSR.W  D0, D3
+
+        NOT.W  $3333
+        NOT.B  $5555
+        NOT.L  $44444444 
+
+        
+		LSR.W  D0, D3
         LSR.W  #2, D3
         
-		 LSL.W  D0, D3
+		LSL.W  D0, D3
         LSL.W  #2, D3
         
-		 ASR.W  D0, D3
+		ASR.W  D0, D3
         ASR.W  #2, D3
         
-		 ASL.W  D0, D3
+		ASL.W  D0, D3
         ASL.W  #2, D3
         
-		 ROL.W  D0, D3
+		ROL.W  D0, D3
         ROL.W  #2, D3
         
-		 ROR.W  D0, D3
+		ROR.W  D0, D3
         ROR.W  #2, D3
+        
+		LSR.B  D0, D3
+        LSR.B  #2, D3
+        
+		LSL.B  D0, D3
+        LSL.B  #2, D3
+        
+		ASR.B  D0, D3
+        ASR.B  #2, D3
+        
+		ASL.B  D0, D3
+        ASL.B  #2, D3
+        
+		ROL.B  D0, D3
+        ROL.B  #2, D3
+        
+		ROR.B  D0, D3
+        ROR.B  #2, D3
+        
+		LSR.L  D0, D3
+        LSR.L  #2, D3
+        
+		LSL.L  D0, D3
+        LSL.L  #2, D3
+        
+	    ASR.L  D0, D3
+        ASR.L  #2, D3
+        
+		ASL.L  D0, D3
+        ASL.L  #2, D3
+        
+		ROL.L  D0, D3
+        ROL.L  #2, D3
+        
+		ROR.L  D0, D3
+        ROR.L  #2, D3
 *        
 
         BTST  #2, D3
@@ -473,34 +498,10 @@ START:                  ; first instruction of program
 *        BRA.W  D0, (A3)+
 *        BRA.W  D0, -(A3)
 *        
-*		 JSR.W  D0, D3
-*        JSR.W  (A0),D3
-*        JSR.W  (A0)+,D3
-*        JSR.W  -(A0),D3
-*        JSR.W  #2, D3
-*        JSR.W  $3333, D3
-*        JSR.W  $44444444, D3
-*        JSR.W  D0, $3333
-*        JSR.W  D0, $44444444
-*        JSR.W  D0, A3
-*        JSR.W  D0,    (A3)
-*        JSR.W  D0, (A3)+
-*        JSR.W  D0, -(A3)
-*        
-*		 RTS.W  D0, D3
-*        RTS.W  (A0),D3
-*        RTS.W  (A0)+,D3
-*        RTS.W  -(A0),D3
-*        RTS.W  #2, D3
-*        RTS.W  $3333, D3
-*        RTS.W  $44444444, D3
-*        RTS.W  D0, $3333
-*        RTS.W  D0, $44444444
-*        RTS.W  D0, A3
-*        RTS.W  D0,    (A3)
-*        RTS.W  D0, (A3)+
-*        RTS.W  D0, -(A3)
+		 JSR    start
+
         
+		 RTS
 * Put program code here
 
     SIMHALT             ; halt simulator

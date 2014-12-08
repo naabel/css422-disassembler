@@ -156,13 +156,13 @@ code0001       JSR         MoveByte
 code0010       JSR         MoveLong               
                 BRA        continueMain
 
-code0011       BRA         MoveWord
+code0011       JSR         MoveWord
                BRA        continueMain
 
-code0100       STOP        #$2700
+code0100       JSR         code0100Decode
                BRA        continueMain
 
-code0101       STOP        #$2700
+code0101       JSR          code0101Decode
                BRA        continueMain
 
 code0110       STOP        #$2700
@@ -171,19 +171,20 @@ code0110       STOP        #$2700
 code0111       STOP        #$2700
                BRA        continueMain
 
-code1000       STOP        #$2700
+code1000       JSR          code1000Decode
                BRA        continueMain
-
-code1001       STOP        #$2700
+                
+              
+code1001       JSR          code1001Decode
                BRA        continueMain
 
 code1010       STOP        #$2700
                BRA        continueMain
  
-code1011       BRA         code1011
+code1011       JSR          code1011Decode
                BRA        continueMain
 
-code1100       STOP        #$2700
+code1100       JSR         code1100Decode
                BRA        continueMain
 
 
@@ -212,6 +213,8 @@ GroupZeroType
                 CLR.L         D4  *Memory increment save
                 CLR.L         D5  *size
                 CLR.L         D7  *
+*------------set opcodeNib
+                MOVE.W      #0, OpcodeNib
 *----------- store size-------------------------------
                 MOVE.W      D6, D5
                 LSL.W       #8, D5
@@ -230,17 +233,13 @@ GroupZeroType
                 LSL.W       D1, D2
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
-                MOVE.W      D2, Mode
-                
-              
-
+                MOVE.W      D2, Mode         
 *-----------Register Number-------------------
                 MOVE.W      D6, D3
                 MOVE.B      #13, D1
                 LSL.W       D1,D3
                 LSR.W       D1,D3
                 MOVE.W      D3, Reg
-
 *-------------Identifier set------------------                
                 MOVE.W      D6, D0
                 LSR.W       #8, D0
@@ -255,6 +254,8 @@ GroupZeroCompare
                 BEQ         CMPIopCode
                 CMPI.W      #%00001010, D0
                 BEQ         EORIopCode
+                CMPI.W      #%00000100, D0
+                BEQ         SUBIopCode
 
 
 ORIopCode
@@ -302,11 +303,23 @@ EORIopCode
                 JSR         modeCompare
                 RTS 
 
+SUBIopCode
+                JSR         outSUBI
+                JSR         printSize
+                JSR         getImmDataFromOpCodeSize
+                JSR         DisplayComma
+                JSR         displaySpace
+                MOVE.W      Mode, D2
+                MOVE.W      Reg, D3
+                JSR         modeCompare
+                RTS
+
+
 checkImmOrReg
                 MOVE.W      RegOrCount, D1
+                MOVE.W      RegOrCount, D3
                 CMPI.W      #4, D1
                 BEQ         getImmDataFromOpCodeSize
-                MOVE.W      RegOrCount, D3
                 BNE         disDataReg
 
 getImmDataFromOpCodeSize
@@ -403,8 +416,6 @@ MoveSrcModeDecode
 *------------
 MoveDesDecode   BRA     MoveDesXnDecode        
 
-
-
 MoveDesXnDecode
                 MOVE.W  D6,D0
                 MOVE.B  #shift12, D1
@@ -430,12 +441,517 @@ MoveDesModeDecode
                 MOVE.W  D0, D2
                 MOVE.W  D2, Mode
                 MOVE.W  Mode, D2
-                MOVE.W  Reg, D3
+                MOVE.W  Reg, D3 
                 JSR     ModeCompare
                 RTS
 
+*--------------Code 0100 Decode-----------------------------
+code0100decode      BRA     code0100type
 
-*--------------Add Group Decode-----------------------------
+code0100type
+*-------------------opCodeNib set
+                MOVE.W  #4, OpCodeNib
+*--------------------condition        
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #12, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, condition
+*--------------------Address Reg for LEA
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, RegOrCount                
+*--------------------Size
+                MOVE.W  D6, D0
+                LSL.W   #8, D0
+                MOVE.W  #14,D1
+                LSR.W   D1, D0
+                MOVE.W  D0, OpcodeSize
+*-----------------------LEA ID Tag
+                MOVE.W  D6, D0
+                LSL.W   #7, D0
+                MOVE.W  #13,D1
+                LSR.W   D1, D0
+                MOVE.W  D0, LEAidTag
+
+*--------------------Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, Mode
+*--------------------Reg
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+*--------------------
+                CMPI.W  #%111, LEAidtag
+                BEQ     LEADecode                
+                CMPI.W  #%0110, condition
+                BEQ     NotDecode
+                CMPI.W  #%0100, condition
+                BEQ     NegDecode
+                CMPI.W  #%1100, condition
+                BEQ     MOVEMeaBack
+                CMPI.W  #%1000, condition
+                BEQ     MOVEMeaFront 
+                CMPI.W  #%1110, condition
+                BEQ     checkJsrRts
+                BNE     disError
+checkJsrRts
+                CMPI.W  #%10, OpcodeSize
+                BEQ     JSRDecode
+                CMPI.W  #%01, OpcodeSize
+                BEQ     RTSDecode
+                BNE     disError
+     
+LEADecode
+                JSR     outLEA
+                JSR     displaySpace
+                MOVE.W  Reg, D3
+                MOVE.W  Mode, D2
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                MOVE.W  #%001, Mode
+                MOVE.W  Mode, D2
+                JSR     ModeCompare
+                RTS
+                
+
+NOTDecode
+                JSR     outNOT
+                MOVE.W  OpcodeSize, D5
+                JSR     printSize
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                RTS
+                
+NEGDecode       
+                JSR     outNeg
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                RTS   
+
+                
+MoveMeaFront
+                JSR     outMoveM
+                MOVE.W  opCodeSize, D5
+                JSR     printSize0100
+                JSR     MOVEMDecode
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     modeCompare
+                RTS
+                
+MoveMeaBack
+                JSR     outMoveM
+                MOVE.W  opCodeSize, D5
+                JSR     printSize0100
+                CMPI.W  #%111, Mode
+                BEQ     SpecialMOVEMDecode
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     modeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                JSR     MOVEMDecode
+                RTS
+
+MOVEMDecode
+                JSR     getWord
+                RTS 
+
+SpecialMOVEMDecode * saved in AddressSave   
+                BEQ     MOVEMSavegetWord
+SpecMoveMREt
+                MOVE.W  #1, Flag
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     modeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                JSR     printDollar
+                MOVE.L  addressSave, D4
+                MOVE.B  #4, Hexlength
+                CLR.B   counter
+                JSR     Hexdecode
+                RTS
+                
+MOVEMSaveGetWord
+                JSR    savegetword 
+                BRA     SpecMoveMRet
+
+MOVEMSaveGetLong
+                JSR    savegetlong 
+                BRA     SpecMoveMRet     
+
+
+
+JSRDecode
+                JSR     outJSR
+                JSR     displaySpace
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                RTS
+                
+RTSDecode   
+                JSR     outRTS
+                RTS
+
+
+
+*------------------CODE 0101 Decoding ADDQ Only--------------------
+code0101Decode 
+                BRA     Code0101Type
+code0101Type
+*------------------OpcodeNib Set
+                MOVE.W  #5, opcodeNib
+*------------------Data
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, ImmData
+                MOVE.B  #1, ImmDataSize
+*------------------Operation Size
+                MOVE.W  D6, D0
+                LSL.W   #8, D0
+                MOVE.W  #14, D1
+                LSR.W   D1,D0
+                MOVE.W  D0, OpcodeSize
+*------------------ Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W    D1, D0
+                MOVE.W  D0, Mode
+*------------------ Reg
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+*----------------8th bit
+                MOVE.W  D6, D0
+                LSL.W   #7, D0
+                MOVE.W  #15, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, OpMode
+*--------------ID
+                CMPI.W  #0, OpMode
+                BEQ     ADDQDecode
+                                
+ADDQDecode
+                JSR     outADDQ
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                JSR     printHash
+                JSR     printDollar
+                MOVE.W  #12, D1
+                MOVE.W  ImmData, D0
+                LSL.W   D1, D0
+                MOVE.W  D0, ImmData
+                JSR     outImmData
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     modeCompare
+                RTS
+
+*--------------Code 1001 - Division -------------------------------
+code1000Decode  BRA         Code1000Type
+
+Code1000Type
+*------------------------OpcodeNib
+                MOVE.W  #8, OpcodeNib              
+*-------------------REgister
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, RegOrCount
+*--------------------Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, Mode
+*--------------------OpCodeSize from Mode
+                MOVE.W  Reg, D0
+                MOVE.W  #15, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                ADDI.W  #1, D0
+                MOVE.W  D0, OpcodeSize
+*--------------------Reg               
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+
+
+DivsDecode
+                JSR     OutDIVS
+                JSR     outSizeWord
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+                RTS
+                
+
+
+
+
+*--------------Code 1001 - Sub/SubA -------------------------------
+code1001Decode  BRA         Code1001Type
+
+Code1001Type
+*------------------------OpcodeNib
+                MOVE.W  #9, OpcodeNib              
+*-------------------REgister
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, RegOrCount
+*-------------------OpMode
+                MOVE.W  D6, D0
+                LSL.W   #7, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, OpMode
+                MOVE.W  #14, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, OpCodeSize
+*--------------------Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, Mode
+*--------------------Reg               
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+
+*---------------------ID
+                CMPI.W  #%11, OpCodeSize
+                BEQ     SUBADecode
+                BNE     SUBDecode
+                
+SUBADecode
+                JSR     outSUBA
+                MOVE.W  opCodeSize, D5
+                JSR     printSize0100
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disAddressRegMode                              
+                RTS               
+
+                
+SUBDecode
+                BTST        #2, Opmode
+                BEQ         SUBDecodeEA2Dn
+                BNE         SUBDecodeDn2EA  
+
+                
+SubDecodeDn2EA
+                JSR     outSUB
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+                JSR     DisplayComma
+                JSR     DisplaySpace
+                MOVE.W  Mode,D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                RTS
+                
+
+
+SubDecodeEA2Dn
+                JSR     outSUB
+                MOVE.W  opCodeSize, D5
+                JSR     printSize
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode                              
+                RTS
+
+*--------------Code 1011 - Exclusive OR-----------------------
+code1011Decode  BRA     code1011Type
+
+Code1011Type    
+*-----------------OpcodeNib
+                MOVE.W  #11, OpcodeNib
+*------------------OpMode
+                MOVE.W  D6, D0
+                MOVE.W  #7, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, OpMode
+*-----------------OpCodeSize
+                MOVE.W  OpMode, D0
+                MOVE.W  #14, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, OpCodeSize
+*-----------------Register Data
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, RegOrCount                  
+*------------------Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, Mode
+*------------------Reg
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+
+EORDecode
+                JSR     outEOR
+                MOVE.W  opCodeSize, D5
+                JSR     printSize
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     modeCompare
+                RTS                
+
+                
+*--------------Code 1100 - Multiply and AND----------------------------
+
+code1100Decode  BRA        Code1100Type
+
+Code1100Type
+*--------------------OpcodeNib
+                MOVE.W  #12, OpcodeNib
+*-------------------REgister
+                MOVE.W  D6, D0
+                LSL.W   #4, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, RegOrCount
+*-------------------OpMode
+                MOVE.W  D6, D0
+                LSL.W   #7, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, OpMode
+                MOVE.W  #14, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, OpCodeSize
+*--------------------Mode
+                MOVE.W  D6, D0
+                MOVE.W  #10, D1
+                LSL.W   D1, D0
+                MOVE.W  #13, D1
+                LSR.W   D1, D0
+                MOVE.W  D0, Mode
+*--------------------Reg               
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   D1, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, Reg
+
+*---------------------ID
+                CMPI.W  #%111, OpMode
+                BEQ     MULSDecode
+                BNE     ANDDecode
+
+
+MULSDecode
+                JSR     outMULS
+                JSR     outSizeWord
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode                              
+                RTS
+ANDDecode
+                BTST        #2, Opmode
+                BEQ         ANDDecodeEA2Dn
+                BNE         ANDDecodeDn2EA            
+
+ANDDecodeEA2Dn       
+                JSR     outAND
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                MOVE.W  Mode,D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     DisplayComma
+                JSR     DisplaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+                RTS
+
+ANDDecodeDn2EA       
+                JSR     outAND
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+                JSR     DisplayComma
+                JSR     DisplaySpace
+                MOVE.W  Mode,D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                RTS                          
+
+*--------------CODE 1101 - Add Group Decode-----------------------------
 AddGroup            BRA     addGroupType
 
 addGroupType    
@@ -445,7 +961,9 @@ addGroupType
                 CLR.L         D3  *
                 CLR.L         D4  *will store direction of opcode
                 CLR.L         D5  *size
-                CLR.L         D7  *i/r
+                CLR.L         D7  *i/
+*-----------------opcodeNib
+                MOVE.W      #13, OpcodeNib
                 
 *------------       Des Reg direction bit                       
                 
@@ -498,6 +1016,7 @@ checkAddType
                 BEQ           addAType
                 BNE           addType
 
+
 addAType
                 JSR           outAddA
                 MOVE.W        bitsOfSize, OpCodeSize       
@@ -520,15 +1039,9 @@ AddprintRest
                 MOVE.W           Mode, D2
                 JSR              ModeCompare
                 RTS   
-                 
-                
 
 
-
-                
-
-
-*--------------BitShiftingGroup Decode-----------------------------
+*--------------Code 1110 - BitShiftingGroup Decode-----------------------------
 
 bitShiftGroup            BRA bitShiftType
 
@@ -540,6 +1053,8 @@ bitShiftType
                 CLR.L         D4  *will store direction of opcode
                 CLR.L         D5  *size
                 CLR.L         D7  *i/r
+*-----------------OpcodeNib
+                MOVE.W      #14, OpcodeNib
                 
 *------------       store direction bit               
                 MOVE.W      D6, D4
@@ -790,6 +1305,25 @@ GetLong
                 JSR     HexDecode
                 RTS
 
+
+SaveGetByte
+                MOVE.W  (A5)+,  D4
+                MOVE.B  #24, D2
+                LSL.L   D2, D4
+                MOVE.L  D4, AddressSave
+                RTS
+
+SaveGetWord         
+                MOVE.W  (A5)+,  D4
+                MOVE.B  #16, D2
+                LSL.L   D2, D4
+                MOVE.L  D4, AddressSave
+                RTS
+                
+SaveGetLong         
+                MOVE.L  (A5)+,  D4
+                MOVE.L  D4, AddressSave
+                RTS
 *----------------------------------------------
 printDirection
                 CMPI.B      #0, D4
@@ -808,7 +1342,13 @@ printSize
                 
                 RTS
 
-
+printSize0100
+                CMPI.B      #2, D5
+                BEQ         outSizeWord
+                CMPI.B      #3, D5
+                BEQ         outSizeLong
+                BNE         disError                
+                RTS
                 
 *----------------------------------------------
 
@@ -1052,7 +1592,10 @@ CheckMoveA
                 RTS
                 
 outMoveM    
-                JSR         outMove
+                MOVE.B      #$4D, (A6)+
+                MOVE.B      #$4F, (A6)+
+                MOVE.B      #$56, (A6)+
+                MOVE.B      #$45, (A6)+
                 MOVE.B      #$4D, (A6)+
                 RTS
 
@@ -1065,6 +1608,12 @@ outAdd
 outAddA
                 JSR         outAdd
                 MOVE.B      #$41, (A6)+
+                RTS
+
+
+outAddQ          
+                JSR         outADD
+                MOVE.B      #$51, (A6)+
                 RTS
 
 
@@ -1207,7 +1756,7 @@ outBRA
                 RTS
                 
 outJSR
-                MOVE.B      #$42, (A6)+
+                MOVE.B      #$4A, (A6)+
                 MOVE.B      #$53, (A6)+
                 MOVE.B      #$52, (A6)+
                 RTS
@@ -1379,9 +1928,14 @@ Reg             DS.W    1 ************
 RegOrCount      DS.W    1
 OpMode          DS.W    1
 
+condition       DS.W    1
+LEAidtag        DS.W    1
 
 EAword          DS.W    1
 EAlong          DS.L    1
+AddressSave     DS.L    1
+
+flag            DS.W    1
 
 
 ImmOrReg        DS.W    1
