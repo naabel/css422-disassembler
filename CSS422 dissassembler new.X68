@@ -165,7 +165,7 @@ code0100       JSR         code0100Decode
 code0101       JSR          code0101Decode
                BRA        continueMain
 
-code0110       STOP        #$2700
+code0110       JSR        BranchGroup
                BRA        continueMain
 
 code0111       STOP        #$2700
@@ -205,6 +205,8 @@ code1111       STOP        #$2700
 
 GroupZero       BRA        GroupZeroType
 
+BranchGroup     BRA         BranchType
+
 GroupZeroType   
                 CLR.L         D0
                 CLR.L         D1  *temp variables
@@ -233,7 +235,9 @@ GroupZeroType
                 LSL.W       D1, D2
                 MOVE.B      #13, D1
                 LSR.W       D1, D2
+
                 MOVE.W      D2, Mode         
+
 *-----------Register Number-------------------
                 MOVE.W      D6, D3
                 MOVE.B      #13, D1
@@ -243,7 +247,35 @@ GroupZeroType
 *-------------Identifier set------------------                
                 MOVE.W      D6, D0
                 LSR.W       #8, D0
-                BRA         GroupZeroCompare
+                BRA         GroupZeroCompare                
+                
+                
+BranchType
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
+
+*-----------Get Condition
+
+                CLR.B           OpCodeCondition
+                MOVE.W          D6, D2
+                LSL.W           #4, D2
+                MOVE.B          #12,    D1
+                LSR.W           D1,     D2
+                MOVE.B          D2, OpCodeCondition
+                
+*-----------Get Displacement
+
+                CLR.B           OpCodeDisplacement
+                MOVE.W          D6, D3
+                LSL.W           #8, D3
+                LSR.W           #8, D3
+                MOVE.B          D3, OpCodeDisplacement
+                BRA             BranchCode
 
 GroupZeroCompare
                 CMPI.W      #%00000000, D0
@@ -257,6 +289,7 @@ GroupZeroCompare
                 CMPI.W      #%00000100, D0
                 BEQ         SUBIopCode
 
+*----------GroupZero Functions
 
 ORIopCode
                 JSR         outORI
@@ -290,7 +323,7 @@ CMPIopCode
                 MOVE.W      Mode, D2
                 MOVE.W      Reg, D3
                 JSR         modeCompare
-                RTS                
+                RTS
 
 EORIopCode
                 JSR         outEORI
@@ -313,8 +346,9 @@ SUBIopCode
                 MOVE.W      Reg, D3
                 JSR         modeCompare
                 RTS
-
-
+                
+*----------GroupZero Helpers
+                
 checkImmOrReg
                 MOVE.W      RegOrCount, D1
                 MOVE.W      RegOrCount, D3
@@ -332,7 +366,52 @@ getImmDataFromOpCodeSize
                 CMPI.W      #2, D1
                 BEQ         getLong
                 RTS
-                                
+
+*----------Branch Functions
+
+BranchCode
+                JSR         bccCodeTypeDisplay
+                JSR         displaySpace
+                JSR         getDisplacementByField
+                RTS
+                
+*----------Branch Helpers
+                
+bccCodeTypeDisplay
+                CLR             D2
+                MOVE.B          OpCodeCondition,    D2
+                CMPI.B          #%0000, D2
+                BEQ             outBRA
+                CMPI.B          #%0010, D2
+                BEQ             outBHI
+                CMPI.B          #%0111, D2
+                BEQ             outBEQ
+                CMPI.B          #%1101, D2
+                BEQ             outBLT
+                RTS
+                
+getDisplacementByField
+                CLR             D3
+                MOVE.B          OpCodeDisplacement, D3
+                CMPI.B          #$FF,   D3
+                BEQ             getLongDisplacement
+                CMPI.B          #$00,   D3
+                BEQ             getWordDisplacement
+                
+*Otherwise getByteDisplacement
+                JSR             GetByte
+                BRA             doneDisplacement
+                
+getWordDisplacement
+                JSR             GetWord
+                BRA             doneDisplacement
+                
+getLongDisplacement
+                JSR             GetLong
+                BRA             doneDisplacement
+                
+doneDisplacement    RTS
+
 
 *--------------MOVE.B Decode-----------------------------
 
@@ -1488,8 +1567,6 @@ disImmData
                 JSR     printDollar
                 JSR     outImmData
                 RTS
-
-      
                       
 *----------------------Displays---------------------- 
 
@@ -1917,6 +1994,9 @@ fullOpcode      DS.W    1
 OpCodeNib       DS.W    1
 OpCodeDir       DS.W    1
 
+OpCodeCondition DS.B    1
+OpCodeDisplacement  DS.B    1
+
 OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1
 
@@ -1951,6 +2031,8 @@ NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
+
 
 
 
