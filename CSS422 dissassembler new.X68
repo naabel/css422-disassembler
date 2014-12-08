@@ -232,7 +232,33 @@ GroupZeroType
                 LSR.W       D1, D2
                 MOVE.W      D2, Mode
                 
-              
+GroupSevenType
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
+
+*-----------Get Condition
+
+                CLR.B           OpCodeCondition
+                MOVE.W          D6, D5
+                LSL.W           #4, D5
+                MOVE.B          #12,    D1
+                LSR.W           D1,     D5
+                MOVE.B          D5, OpCodeCondition
+                
+*-----------Get Displacement
+
+                CLR.B           OpCodeDisplacement
+                MOVE.W          D6, D2
+                LSL.W           #8, D2
+                LSR.W           #8, D2
+                MOVE.B          D2, OpCodeDisplacement
+                
+                
 
 *-----------Register Number-------------------
                 MOVE.W      D6, D3
@@ -255,6 +281,8 @@ GroupZeroCompare
                 BEQ         CMPIopCode
                 CMPI.W      #%00001010, D0
                 BEQ         EORIopCode
+                
+GroupSevenCompare
 
 
 ORIopCode
@@ -1368,6 +1396,9 @@ fullOpcode      DS.W    1
 OpCodeNib       DS.W    1
 OpCodeDir       DS.W    1
 
+OpCodeCondition DS.B    1
+OpCodeDisplacement  DS.B    1
+
 OpCodeSize      DS.W    1
 bitsOfSize      DS.B    1
 
@@ -1397,6 +1428,7 @@ NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
 
 
 
