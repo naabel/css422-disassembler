@@ -10,8 +10,6 @@
 *-----------------------------------------------------------
 temp      EQU $400    *location to work at
 stack     EQU $A000
-example   EQU %0001000000111001 
-exampleEA EQU %1111111111111111     * I made up bits 0 to 11      
 shift12   EQU 12                   * Shift 12 bits 
 shift10   EQU 10                   * Shift 10 bits
 shift13   EQU 13 
@@ -21,17 +19,19 @@ shift13   EQU 13
 START:                          
         LEA     stack,SP        *Load the SP
         LEA     jmp_table,A0    *Index into the table
-*        
+ASKinput        
         LEA     ASKSTART, A1    *message to ask user for input
         MOVE.B  #13, D0         *rule 13 allows print without line feed and carriage return if neccesary
         TRAP    #15             *Display A1 message
         
         LEA     STARTPT, A1
         MOVE.B  #2, D0          *input rule saves to D1
-        TRAP    #15             *initiate read from keyboard
-        
+        TRAP    #15
+                             *initiate read from keyboard
+        CLR     D6
+        CLR     D4        
         JSR     setCharToHex    
-        
+
         MOVE.L  D4, STARTPT
         
         CLR.L     D4
@@ -64,16 +64,16 @@ START:
 MainLoop    *Get word  element
             JSR         CheckNumDisplayed
             CMPA.L      ENDPT, A5
-            BEQ         DONE         
+            BGE         DONE         
             ADDI.W      #1, lineNumber
             LEA         output, A6
             MOVE.L      A5, lineAddress
-            JSR         displaySpace
+            JSR         outTab
             MOVE.B      #8, hexlength
             MOVE.L      lineAddress, D4
             CLR.B       counter
             JSR         hexDecode
-            JSR         displaySpace
+            JSR         outTab
             MOVE.W      (A5)+,D6     *variable put in place
             MOVE.W      D6, fullOpcode
 *            MOVE.W      #example, D6        
@@ -168,7 +168,7 @@ code0101       JSR          code0101Decode
 code0110       JSR        BranchGroup
                BRA        continueMain
 
-code0111       STOP        #$2700
+code0111       JSR          outBadData
                BRA        continueMain
 
 code1000       JSR          code1000Decode
@@ -178,7 +178,7 @@ code1000       JSR          code1000Decode
 code1001       JSR          code1001Decode
                BRA        continueMain
 
-code1010       STOP        #$2700
+code1010       JSR          outBadData
                BRA        continueMain
  
 code1011       JSR          code1011Decode
@@ -194,7 +194,7 @@ code1101       JSR        AddGroup
 code1110       JSR        BitShiftGroup
                BRA        continueMain
 
-code1111       STOP        #$2700
+code1111       JSR          outBadData
                BRA        continueMain
 
  
@@ -205,7 +205,7 @@ code1111       STOP        #$2700
 
 GroupZero       BRA        GroupZeroType
 
-BranchGroup     BRA         BranchType
+
 
 GroupZeroType   
                 CLR.L         D0
@@ -247,35 +247,7 @@ GroupZeroType
 *-------------Identifier set------------------                
                 MOVE.W      D6, D0
                 LSR.W       #8, D0
-                BRA         GroupZeroCompare                
-                
-                
-BranchType
-                CLR.L         D0
-                CLR.L         D1  *temp variables
-                CLR.L         D2  *Mode    
-                CLR.L         D3  *Number
-                CLR.L         D4  *Memory increment save
-                CLR.L         D5  *size
-                CLR.L         D7  *
-
-*-----------Get Condition
-
-                CLR.B           OpCodeCondition
-                MOVE.W          D6, D2
-                LSL.W           #4, D2
-                MOVE.B          #12,    D1
-                LSR.W           D1,     D2
-                MOVE.B          D2, OpCodeCondition
-                
-*-----------Get Displacement
-
-                CLR.B           OpCodeDisplacement
-                MOVE.W          D6, D3
-                LSL.W           #8, D3
-                LSR.W           #8, D3
-                MOVE.B          D3, OpCodeDisplacement
-                BRA             BranchCode
+                BRA         GroupZeroCompare 
 
 GroupZeroCompare
                 CMPI.W      #%00000000, D0
@@ -288,6 +260,7 @@ GroupZeroCompare
                 BEQ         EORIopCode
                 CMPI.W      #%00000100, D0
                 BEQ         SUBIopCode
+                BNE         outBadData
 
 *----------GroupZero Functions
 
@@ -305,7 +278,7 @@ ORIopCode
 
 BTSTopCode
                 JSR         outBTST
-                JSR         displaySpace
+                JSR         outTab
                 JSR         checkImmOrReg                
                 JSR         displayComma
                 JSR         displaySpace
@@ -367,6 +340,50 @@ getImmDataFromOpCodeSize
                 BEQ         getLong
                 RTS
 
+*---------------BRANCH Group----------------------------------------
+
+              
+BranchGroup     BRA         BranchType                
+                
+BranchType
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
+*--------------------OpcodeNib
+                MOVE.W  #4, opcodeNib
+
+                CLR.L         D0
+                CLR.L         D1  *temp variables
+                CLR.L         D2  *Mode    
+                CLR.L         D3  *Number
+                CLR.L         D4  *Memory increment save
+                CLR.L         D5  *size
+                CLR.L         D7  *
+*------------set opcodeNib
+                MOVE.W      #0, OpcodeNib
+
+*-----------Get Condition
+
+                CLR.B           OpCodeCondition
+                MOVE.W          D6, D2
+                LSL.W           #4, D2
+                MOVE.B          #12,    D1
+                LSR.W           D1,     D2
+                MOVE.B          D2, OpCodeCondition
+                
+*-----------Get Displacement
+
+                CLR.B           OpCodeDisplacement
+                MOVE.W          D6, D3
+                LSL.W           #8, D3
+                LSR.W           #8, D3
+                MOVE.B          D3, OpCodeDisplacement
+                BRA             BranchCode
+
 *----------Branch Functions
 
 BranchCode
@@ -384,20 +401,23 @@ bccCodeTypeDisplay
                 BEQ             outBRA
                 CMPI.B          #%0010, D2
                 BEQ             outBHI
+                CMPI.B          #%0110, D2
+                BEQ             outBNE
                 CMPI.B          #%0111, D2
                 BEQ             outBEQ
                 CMPI.B          #%1101, D2
                 BEQ             outBLT
+                BNE             outBadData
                 RTS
                 
 getDisplacementByField
                 CLR             D3
+                JSR             outTab
                 MOVE.B          OpCodeDisplacement, D3
                 CMPI.B          #$FF,   D3
                 BEQ             getLongDisplacement
                 CMPI.B          #$00,   D3
                 BEQ             getWordDisplacement
-                
 *Otherwise getByteDisplacement
                 JSR             GetByte
                 BRA             doneDisplacement
@@ -581,7 +601,7 @@ code0100type
                 BEQ     MOVEMeaFront 
                 CMPI.W  #%1110, condition
                 BEQ     checkJsrRts
-                BNE     disError
+                BNE     outBadData
 checkJsrRts
                 CMPI.W  #%10, OpcodeSize
                 BEQ     JSRDecode
@@ -591,6 +611,7 @@ checkJsrRts
      
 LEADecode
                 JSR     outLEA
+                JSR     outTab
                 JSR     displaySpace
                 MOVE.W  Reg, D3
                 MOVE.W  Mode, D2
@@ -681,6 +702,7 @@ MOVEMSaveGetLong
 
 JSRDecode
                 JSR     outJSR
+                JSR     outTab
                 JSR     displaySpace
                 MOVE.W  Mode, D2
                 MOVE.W  Reg, D3
@@ -734,6 +756,7 @@ code0101Type
 *--------------ID
                 CMPI.W  #0, OpMode
                 BEQ     ADDQDecode
+                BNE     outBadData
                                 
 ADDQDecode
                 JSR     outADDQ
@@ -753,7 +776,7 @@ ADDQDecode
                 JSR     modeCompare
                 RTS
 
-*--------------Code 1001 - Division -------------------------------
+*--------------Code 1000 - Division -------------------------------
 code1000Decode  BRA         Code1000Type
 
 Code1000Type
@@ -779,6 +802,12 @@ Code1000Type
                 LSR.W   D1, D0
                 ADDI.W  #1, D0
                 MOVE.W  D0, OpcodeSize
+*---------------------OpMode
+                MOVE.W  D6, D0
+                MOVE.W  #13, D1
+                LSL.W   #7, D0
+                LSR.W   D1, D0
+                MOVE.W  D0, OpMode
 *--------------------Reg               
                 MOVE.W  D6, D0
                 MOVE.W  #13, D1
@@ -846,8 +875,8 @@ Code1001Type
                 
 SUBADecode
                 JSR     outSUBA
-                MOVE.W  opCodeSize, D5
-                JSR     printSize0100
+                MOVE.W  opMode, D5
+                JSR     printSizeSub
                 MOVE.W  Mode, D2
                 MOVE.W  Reg, D3
                 JSR     ModeCompare
@@ -892,7 +921,7 @@ SubDecodeEA2Dn
                 JSR     disDataRegMode                              
                 RTS
 
-*--------------Code 1011 - Exclusive OR-----------------------
+*--------------Code 1011 - Exclusive OR and CMP-----------------------
 code1011Decode  BRA     code1011Type
 
 Code1011Type    
@@ -914,7 +943,7 @@ Code1011Type
 *-----------------Register Data
                 MOVE.W  D6, D0
                 MOVE.W  #13, D1
-                LSL.W   D1, D0
+                LSL.W   #4, D0
                 LSR.W   D1, D0
                 MOVE.W  D0, RegOrCount                  
 *------------------Mode
@@ -930,6 +959,12 @@ Code1011Type
                 LSL.W   D1, D0
                 LSR.W   D1, D0
                 MOVE.W  D0, Reg
+*------------------ID
+                BTST  #2, OpMode
+                BNE   EORDecode
+                CMPI.W  #%11, OpCodeSize
+                BEQ     CMPADecode
+                BNE     CMPDecode
 
 EORDecode
                 JSR     outEOR
@@ -943,6 +978,42 @@ EORDecode
                 MOVE.W  Reg, D3
                 JSR     modeCompare
                 RTS                
+
+CMPADecode
+                JSR     outCMPA
+                JSR     CMPASize
+                MOVE.W  Mode, D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     displayComma
+                JSR     displaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disAddressRegMode                              
+                RTS               
+
+CMPASize        
+                CMPI.W  #3, OpMode
+                BEQ     outSizeWord
+                CMPI.W  #7, OpMode
+                BEQ     outSizeLong
+                BNE     disError
+                RTS
+                
+CMPDecode
+
+                JSR     outCMP
+                MOVE.W  OpCodeSize, D5
+                JSR     printSize
+                MOVE.W  Mode,D2
+                MOVE.W  Reg, D3
+                JSR     ModeCompare
+                JSR     DisplayComma
+                JSR     DisplaySpace
+                MOVE.W  RegOrCount, D3
+                JSR     disDataRegMode
+
+                RTS
+                
 
                 
 *--------------Code 1100 - Multiply and AND----------------------------
@@ -1188,6 +1259,7 @@ BitShiftTypeCompare
                 BEQ         AsyShiftGroup
                 CMPI.B      #%11, D0
                 BEQ         RotShiftGroup
+                BNE         outBadData
                 
 
 LogShiftGroup
@@ -1427,6 +1499,14 @@ printSize0100
                 CMPI.B      #3, D5
                 BEQ         outSizeLong
                 BNE         disError                
+                RTS
+
+printSizeSub
+                CMPI.B      #3, D5
+                BEQ         outSizeWord
+                CMPI.B      #7, D5
+                BEQ         outSizeLong
+                BNE         disError
                 RTS
                 
 *----------------------------------------------
@@ -1863,17 +1943,17 @@ outDirectionR
 outSizeByte
                 MOVE.B  #$2E, (A6)+
                 MOVE.B  #$42, (A6)+
-                MOVE.B  #$20, (A6)+
+                MOVE.B  #$9, (A6)+
                 RTS
 outSizeWord
                 MOVE.B  #$2E, (A6)+
                 MOVE.B  #$57, (A6)+
-                MOVE.B  #$20, (A6)+  
+                MOVE.B  #$9, (A6)+  
                 RTS
 outSizeLong
                 MOVE.B  #$2E, (A6)+
                 MOVE.B  #$4C, (A6)+
-                MOVE.B  #$20, (A6)+
+                MOVE.B  #$9, (A6)+
                 RTS        
 *----------------------------------------------------------------
 *                         ASCII to HEX Decode                   |
@@ -1967,9 +2047,29 @@ displayOutput
                 MOVE.B  #13, D0
                 TRAP    #15
                 RTS
+
+
+outBadData
+                MOVE.B  #$44, (A6)+
+                MOVE.B  #$41, (A6)+
+                MOVE.B  #$54, (A6)+
+                MOVE.B  #$41, (A6)+
+                
+                *SHIFT OPCODE 
+                JSR     outTab
+                MOVE.W  #16, D1
+                MOVE.W  D6, D4
+                LSL.L   D1, D4
+                MOVE.B  #4, Hexlength
+                CLR.B   Counter
+                JSR     HexDecode
+                RTS
+
+outTab          MOVE.B  #$9, (A6)+
+                RTS          
     
 DONE
-*        BRA         START
+        BRA         askinput
 
     
 
@@ -2031,6 +2131,9 @@ NumDisplayed    DS.B    1
  
     END START          
        ; last line of source
+
+
+
 
 
 
